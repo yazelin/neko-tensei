@@ -106,3 +106,68 @@ footer p{margin:.3em 0}
 .newest{margin:.9rem 0 0;font-size:.9rem;color:var(--ink-dim);letter-spacing:.03em}
 .newest a{color:var(--gold);border-bottom:1px solid transparent}
 .newest a:hover{border-bottom-color:var(--gold)}
+
+/* ── 行動版:閱讀頁滿版,要的是連續感 ── */
+@media(max-width:720px){
+  .reader{max-width:none}
+  .reader img{margin:0 0 2px;border-radius:0}
+}
+
+/* ── 行動版:閱讀頁固定頂欄 ── */
+.reader-top{position:fixed;top:0;left:0;right:0;z-index:100;
+  display:flex;align-items:center;gap:.8rem;
+  /* 裝成 App(standalone + black-translucent)後,頁面會延伸到狀態列底下,
+     頂欄不吃 inset 就會被時鐘電量壓住 */
+  padding:calc(.7rem + env(safe-area-inset-top,0px)) 1rem .7rem;
+  background:rgba(18,20,29,.92);backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--line);
+  transition:transform .25s ease}
+.reader-top.hide{transform:translateY(-100%)}
+.reader-top .back,.reader-top .eps,.reader-top .chars{color:var(--ink-dim);font-size:1.3rem;line-height:1;flex:none}
+.reader-top .back:hover,.reader-top .eps:hover,.reader-top .chars:hover{color:var(--gold)}
+.reader-top .chars svg{width:1.15rem;height:1.15rem;fill:currentColor;display:block}
+.reader-top .ttl{flex:1;min-width:0;font-size:.95rem;color:var(--ink);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.reader{padding-top:calc(52px + env(safe-area-inset-top,0px))}
+
+/* ── 行動版:閱讀進度條 ──
+   height 要把 safe area 一起算進去:全站是 border-box,只寫 height:3px 再加
+   padding-bottom,used height 會被 padding 撐成一整片,軌道底色整面畫滿。
+   background-clip:content-box 讓底色只出現在上面那 3px,墊高的部分留透明。 */
+.progress{position:fixed;left:0;right:0;bottom:0;z-index:100;
+  height:calc(3px + env(safe-area-inset-bottom,0px));
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  background:rgba(255,255,255,.12);background-clip:content-box}
+.progress > i{display:block;height:3px;width:0;background:var(--gold);
+  transition:width .25s ease}
+.progress > span{position:absolute;right:.6rem;
+  bottom:calc(.6rem + env(safe-area-inset-bottom,0px));
+  font-size:.72rem;letter-spacing:.06em;color:var(--ink-dim);
+  background:rgba(18,20,29,.78);padding:.12rem .5rem;border-radius:10px}
+
+/* ── 行動版:底部 tabbar ── */
+.tabbar{display:none}
+@media(max-width:720px){
+  .tabbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:150;
+    background:rgba(18,20,29,.96);border-top:1px solid var(--line);
+    padding-bottom:env(safe-area-inset-bottom,0px)}
+  .tabbar > *{flex:1;display:flex;flex-direction:column;align-items:center;gap:.15rem;
+    padding:.5rem 0 .45rem;background:none;border:0;cursor:pointer;
+    color:var(--ink-dim);font:inherit;font-size:.68rem;letter-spacing:.06em}
+  .tabbar svg{width:20px;height:20px;fill:currentColor}
+  .tabbar > *:hover{color:var(--gold)}
+  /* 只有掛 tabbar 的頁面要讓位。閱讀頁(有 data-ep)走 initReader,
+     不會建 tabbar 也不會量 --tabbar-h,吃了 fallback 就是白留 56px */
+  body:not([data-ep]){padding-bottom:var(--tabbar-h,56px)}
+  #inst{display:none!important}   /* 安裝鈕在 tabbar,首頁不重複放 */
+}
+
+/* ── 首頁:繼續閱讀 ── */
+.resume{display:flex;align-items:center;gap:.85rem;
+  margin:0 0 1.6rem;padding:.85rem 1rem;text-align:left;
+  background:var(--panel);border:1px solid var(--line);border-radius:12px;color:var(--ink)}
+.resume:hover{border-color:var(--gold);color:var(--ink)}
+.resume-ic{flex:none;width:34px;height:34px;display:grid;place-items:center;
+  border-radius:50%;background:var(--gold);color:#241c08;font-size:.85rem}
+.resume-t{font-size:.95rem;line-height:1.5}
+.resume-t small{display:block;color:var(--ink-dim);font-size:.78rem;letter-spacing:.04em}
