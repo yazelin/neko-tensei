@@ -6,7 +6,7 @@
    (GitHub Pages 回 Vary: Accept-Encoding,不加 ignoreVary 會 miss)。 */
 
 const SHELL = 'nt-shell-v2';
-const ASSET = 'nt-asset-v2';
+const ASSET = 'nt-asset-v3';
 
 const SHELL_FILES = [
   './', './index.html', './ep1.html',
