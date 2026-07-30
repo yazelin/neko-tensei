@@ -44,6 +44,7 @@ HEAD = """<!doctype html><html lang="zh-Hant-TW"><head><meta charset="utf-8">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="stylesheet" href="style.css">
+<script src="app.js" defer></script>
 <script type="application/ld+json">
 {{"@context":"https://schema.org","@type":"ComicIssue","issueNumber":{n},
 "name":"{h1}","inLanguage":"zh-Hant-TW",
@@ -52,16 +53,14 @@ HEAD = """<!doctype html><html lang="zh-Hant-TW"><head><meta charset="utf-8">
 "url":"{url}",
 "image":"{base}og.jpg"}}
 </script>
-</head><body>
+</head><body data-ep="{n}">
 
-<div class="wrap">
-  <nav class="top">
-    <img src="icon-192.png" alt="" width="34" height="34">
-    <a class="site" href="./">{site}</a>
-    <span class="sp"></span>
-    <a href="./#characters">角色</a>
-  </nav>
-</div>
+<nav class="reader-top">
+  <a class="back" href="./" aria-label="回首頁">‹</a>
+  <span class="ttl">{h1}</span>
+  <a class="chars" href="./#characters" aria-label="角色"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-4 0-8 2-8 5v1h16v-1c0-3-4-5-8-5z"/></svg></a>
+  <a class="eps" href="./#episodes" aria-label="話數">☰</a>
+</nav>
 
 <main class="reader">
   <h1 style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">{h1}</h1>
@@ -81,7 +80,8 @@ def build_episode(ep, prev, nxt):
                        url=url, base=BASE, n=ep['n'])]
     for i, p in enumerate(ep['pages']):
         extra = ' fetchpriority="high"' if i == 0 else ' loading="lazy"'
-        out.append(f'  <img src="images/ep{ep["n"]}/{p["f"]}" width="1024" height="1536"{extra}\n'
+        out.append(f'  <img id="p{i}" src="images/ep{ep["n"]}/{p["f"]}"\n'
+                   f'       width="1024" height="1536"{extra}\n'
                    f'       alt="{p["alt"]}">\n')
     out.append('  <p class="credit">%s</p>\n' % ep['credit'])
     out.append('  <nav class="reader-nav">\n    <a class="btn ghost" href="./">回首頁</a>\n')
@@ -93,6 +93,8 @@ def build_episode(ep, prev, nxt):
         out.append(f'    <span class="btn ghost" aria-disabled="true" style="opacity:.45">'
                    f'第{zh(ep["n"] + 1)}話 未完待續……</span>\n')
     out.append('  </nav>\n</main>\n\n')
+    out.append(f'<div class="progress" aria-hidden="true"><i></i>'
+               f'<span>1/{len(ep["pages"])}</span></div>\n\n')
     out.append(FOOTER)
     (ROOT / f'ep{ep["n"]}.html').write_text(''.join(out), 'utf-8')
 
@@ -153,7 +155,7 @@ def main():
     shell = ["  './', './index.html',"]
     shell.append('  ' + ' '.join(f"'./ep{e['n']}.html'," for e in EPS))
     shell.append('  ' + ' '.join(f"'./char-{c['slug']}.html'," for c in CFG['characters']))
-    shell.append("  './style.css', './manifest.json',")
+    shell.append("  './style.css', './app.js', './manifest.json',")
     shell.append("  './icon-192.png', './icon-180.png', './favicon-32.png'")
     splice('sw.js', 'shell', '\n'.join(shell))
 

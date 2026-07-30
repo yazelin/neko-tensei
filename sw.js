@@ -5,7 +5,7 @@
    HTML network-first、資產 cache-first;match 一律 ignoreSearch+ignoreVary
    (GitHub Pages 回 Vary: Accept-Encoding,不加 ignoreVary 會 miss)。 */
 
-const SHELL = 'nt-shell-v9';
+const SHELL = 'nt-shell-v10';
 const ASSET = 'nt-asset-v9';
 
 /* 以下兩份清單由 build.py 從 episodes.json 產生,別手改。 */
@@ -14,7 +14,7 @@ const SHELL_FILES = [
   './', './index.html',
   './ep1.html', './ep2.html',
   './char-xiaoniao.html', './char-xiaobai.html', './char-uncle.html', './char-leo.html', './char-kojiro.html',
-  './style.css', './manifest.json',
+  './style.css', './app.js', './manifest.json',
   './icon-192.png', './icon-180.png', './favicon-32.png'/* shell:end */
 ];
 
