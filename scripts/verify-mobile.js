@@ -57,6 +57,21 @@ async function main() {
     const imgW = await page.$eval('#p1', e => e.getBoundingClientRect().width);
     check('手機上圖片滿版', Math.abs(imgW - vw) < 1, `img ${imgW} vs viewport ${vw}`);
 
+    // ── 檢查:閱讀頁頂欄固定且自動隱現 ──
+    await page.goto(BASE + '/ep2.html');
+    const topBox0 = await page.$eval('.reader-top', e => e.getBoundingClientRect().top);
+    check('頂欄一開始可見', Math.abs(topBox0) < 1, String(topBox0));
+
+    await page.evaluate(() => window.scrollTo(0, innerHeight * 2));
+    await page.waitForTimeout(400);
+    const topBox1 = await page.$eval('.reader-top', e => e.getBoundingClientRect().bottom);
+    check('往下捲頂欄收起', topBox1 <= 0.5, String(topBox1));
+
+    await page.evaluate(() => window.scrollBy(0, -200));
+    await page.waitForTimeout(400);
+    const topBox2 = await page.$eval('.reader-top', e => e.getBoundingClientRect().top);
+    check('往上捲頂欄滑回', Math.abs(topBox2) < 1, String(topBox2));
+
     await browser.close();
   } finally {
     server.kill();
