@@ -37,6 +37,30 @@
         lastY = y;
       }, { passive: true });
     }
+
+    // 目前在第幾張:用 IntersectionObserver 抓通過視窗中線的那張。
+    // 不要算捲動百分比——.credit 與 .reader-nav 會讓百分比失真。
+    var imgs = reader.querySelectorAll('img[id^="p"]');
+    var bar = document.querySelector('.progress > i');
+    var num = document.querySelector('.progress > span');
+    if (!imgs.length || !bar || !num) return;
+
+    var total = imgs.length, cur = -1;
+    var save = throttle(function () { writeProgress(+document.body.dataset.ep, cur); }, 500);
+
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        var n = +e.target.id.slice(1);
+        if (n === cur) return;
+        cur = n;
+        bar.style.width = ((cur + 1) / total * 100) + '%';
+        num.textContent = (cur + 1) + '/' + total;
+        save();
+      });
+    }, { rootMargin: '-50% 0px -50% 0px' });   // root 縮成視窗中線那一條
+
+    imgs.forEach(function (img) { io.observe(img); });
   }
 
   function boot() {

@@ -72,6 +72,22 @@ async function main() {
     const topBox2 = await page.$eval('.reader-top', e => e.getBoundingClientRect().top);
     check('往上捲頂欄滑回', Math.abs(topBox2) < 1, String(topBox2));
 
+    // ── 檢查:進度條頁碼跟著實際看到的那張圖走 ──
+    await page.goto(BASE + '/ep2.html');
+    await page.waitForTimeout(300);
+    check('進度條初始為 1/7', (await page.textContent('.progress > span')) === '1/7',
+      await page.textContent('.progress > span'));
+
+    // 把第 4 張圖(p3)捲到視窗中線
+    await page.evaluate(() => {
+      const el = document.getElementById('p3');
+      const y = el.offsetTop + el.offsetHeight / 2 - innerHeight / 2;
+      window.scrollTo(0, y);
+    });
+    await page.waitForTimeout(400);
+    check('捲到 p3 時顯示 4/7', (await page.textContent('.progress > span')) === '4/7',
+      await page.textContent('.progress > span'));
+
     await browser.close();
   } finally {
     server.kill();
