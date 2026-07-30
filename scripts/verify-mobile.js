@@ -186,6 +186,11 @@ async function main() {
     });
     check('跳轉落在 p3 上緣', landedOffset < 80, String(landedOffset));
 
+    // ── 檢查:繼續閱讀卡只在首頁,角色頁不能出現(即使有紀錄) ──
+    await page.goto(BASE + '/char-kojiro.html');
+    await page.waitForTimeout(300);
+    check('角色頁不顯示繼續閱讀', (await page.$('.resume')) === null);
+
     await browser.close();
   } finally {
     server.kill();

@@ -122,10 +122,11 @@
     measure();
     window.addEventListener('resize', measure);
 
-    // 繼續閱讀:沒有紀錄就整張不出現,不佔位也不顯示假資料
+    // 繼續閱讀只在首頁。角色頁也有 .hero,不能只靠它判斷,
+    // 沒有紀錄也整張不出現,不佔位也不顯示假資料
     var prog = readProgress();
     var hero = document.querySelector('.hero');
-    if (!prog || !prog.ep || !hero) return;
+    if (!prog || !prog.ep || !hero || !document.body.hasAttribute('data-home')) return;
 
     var CN = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
     var where = prog.page === 0 ? '封面' : '第 ' + prog.page + ' 頁';
