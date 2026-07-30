@@ -128,6 +128,41 @@ async function main() {
     // 第四格在沒有 beforeinstallprompt 的環境(等同 iOS)要是「關於」,不是死按鈕
     check('第四格降級為關於', tabs[3] === '關於', tabs[3]);
 
+    // ── 檢查:beforeinstallprompt 觸發後,「安裝」不會疊加「關於」的跳轉 ──
+    // 舊寫法用 addEventListener 註冊跳轉、又用 onclick 疊加安裝行為,兩個一起觸發,
+    // 點「安裝」會意外跳去 #origin。派一個假事件模擬觸發,點下去斷言 hash 沒變。
+    await page.goto(BASE + '/index.html');
+    await page.waitForTimeout(300);
+    await page.evaluate(() => {
+      const ev = new Event('beforeinstallprompt', { cancelable: true });
+      ev.prompt = () => { window.__prompted = true; };
+      ev.userChoice = Promise.resolve({ outcome: 'accepted' });
+      window.dispatchEvent(ev);
+    });
+    await page.waitForTimeout(100);
+    await page.click('#tab4');
+    await page.waitForTimeout(200);
+    const promptCalled = await page.evaluate(() => window.__prompted === true);
+    const hashAfterInstallClick = await page.evaluate(() => location.hash);
+    check('安裝按鈕點下去不會疊加跳轉 #origin',
+      promptCalled && hashAfterInstallClick !== '#origin',
+      `prompted=${promptCalled} hash=${hashAfterInstallClick}`);
+
+    // ── 檢查:角色頁的「關於」要導到首頁的誕生故事,不是死連結 ──
+    // 舊寫法用 location.hash = '#origin',但 char-*.html 沒有 id="origin",
+    // 點下去網址變成 char-kojiro.html#origin,畫面毫無反應。
+    await page.goto(BASE + '/char-kojiro.html');
+    await page.waitForTimeout(300);
+    await Promise.all([
+      page.waitForNavigation({ waitUntil: 'load' }),
+      page.click('#tab4'),
+    ]);
+    await page.waitForTimeout(200);
+    const landed = await page.evaluate(() => ({ path: location.pathname, hash: location.hash }));
+    check('角色頁「關於」落到首頁誕生故事',
+      /\/(index\.html)?$/.test(landed.path) && landed.hash === '#origin',
+      JSON.stringify(landed));
+
     await browser.close();
   } finally {
     server.kill();
