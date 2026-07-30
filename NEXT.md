@@ -1,18 +1,21 @@
 # 下一步
 
-## 討論區（下一個要做的）
+## 討論區（已上線 2026-07-31）
 
-設計已定，順序排在 pipeline 前面，這樣 pipeline 上線時就有社群許願可以讀。
+- 首頁 `#wish`：劇情許願串，內建 **Ideas** 分類，`data-mapping="specific"`、term = `劇情許願`
+- 每一話：自己的討論串，內建 **General** 分類，`data-mapping="pathname"`
+- giscus 捲到附近才載入（`IntersectionObserver`，`rootMargin: 300px`）
 
-- [ ] 開 GitHub Discussions——`gh api repos/yazelin/neko-tensei --jq .has_discussions` 目前是 `false`
-- [ ] 開兩個分類：`劇情許願`（首頁一串，giscus `data-mapping="specific"` 配固定 term）、`每話討論`（`ep*.html` 各一串，`data-mapping="pathname"`）
-- [ ] 掛 giscus，做法照 `catime/docs/index.html` 的 lazy-load 版本改 repo 名
-- [ ] **這步要 yazelin 本人做**：到 github.com 授權 giscus app，我沒有權限
-- [ ] 抓 `data-repo-id` 與 `data-category-id`（`gh api graphql` 查得到）
+**GitHub 沒有開放用 API 建立討論分類**，所以用內建的兩個。想改成中文名可以到
+`https://github.com/yazelin/neko-tensei/settings/discussions` 改，**不會壞**——
+前端只帶 `data-category-id` 不帶 `data-category`，giscus 比對的是 id。
 
-## 自動連載 pipeline
+分類 id（`app.js` 與 `build.py` 各存一份）：Ideas `DIC_kwDOToGp784DCVjL`、General `DIC_kwDOToGp784DCVjJ`。
 
-設計在 `docs/superpowers/specs/2026-07-31-auto-episode-pipeline-design.md`，還沒寫實作計劃。等討論區上線後再做，才有許願可以讀。
+## 自動連載 pipeline（下一個要做的）
+
+設計在 `docs/superpowers/specs/2026-07-31-auto-episode-pipeline-design.md`，還沒寫實作計劃。
+企劃那一步現在有東西可以讀了——首頁許願串（Ideas 分類）。
 
 ## 行動版留下的技術債
 
