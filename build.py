@@ -121,17 +121,21 @@ def main():
                 f'<span>那座黑塔上的魔法陣，又是誰點亮的？</span></div></li>')
     splice('index.html', 'episodes', '\n'.join(rows))
 
-    # 首頁最新一話的封面連結
-    last = EPS[-1]
-    splice('index.html', 'latest',
-           f'      <a class="cover" href="ep{last["n"]}.html" aria-label="開始閱讀第{zh(last["n"])}話">\n'
-           f'        <img src="images/ep{last["n"]}/{last["pages"][0]["f"]}" width="1024" height="1536"\n'
-           f'             alt="{last["pages"][0]["alt"]}" fetchpriority="high">\n'
-           f'      </a>\n'
-           f'      <div>\n'
-           f'        <a class="btn" href="ep{last["n"]}.html">閱讀 第{zh(last["n"])}話</a>\n'
-           f'        <button class="btn ghost" id="inst" type="button">安裝到手機</button>\n'
-           f'      </div>')
+    # 首頁大圖固定放第一話——這是連載,新讀者的門口是第一話,不是最新一話。
+    # 最新一話當輔助入口放在按鈕列,避免大圖直接劇透後面的劇情。
+    first, last = EPS[0], EPS[-1]
+    hero = (f'      <a class="cover" href="ep{first["n"]}.html" aria-label="開始閱讀第{zh(first["n"])}話">\n'
+            f'        <img src="images/ep{first["n"]}/{first["pages"][0]["f"]}" width="1024" height="1536"\n'
+            f'             alt="{first["pages"][0]["alt"]}" fetchpriority="high">\n'
+            f'      </a>\n'
+            f'      <div>\n'
+            f'        <a class="btn" href="ep{first["n"]}.html">開始閱讀 第{zh(first["n"])}話</a>\n'
+            f'        <button class="btn ghost" id="inst" type="button">安裝到手機</button>\n'
+            f'      </div>')
+    if last is not first:
+        hero += (f'\n      <p class="newest">最新：'
+                 f'<a href="ep{last["n"]}.html">第{zh(last["n"])}話 {last["title"]}</a></p>')
+    splice('index.html', 'latest', hero)
 
     # sitemap
     urls = [f'  <url><loc>{BASE}</loc><lastmod>{EPS[-1]["date"]}</lastmod></url>']
@@ -154,7 +158,7 @@ def main():
     splice('sw.js', 'shell', '\n'.join(shell))
 
     warm = []
-    for ep in reversed(EPS):          # 最新一話先暖:讀者最可能開它
+    for ep in EPS:                    # 照閱讀順序暖:首頁的門口是第一話
         for p in ep['pages']:
             warm.append(f"./images/ep{ep['n']}/{p['f']}")
     warm += [f"./images/char-{c['slug']}.webp" for c in CFG['characters']]
