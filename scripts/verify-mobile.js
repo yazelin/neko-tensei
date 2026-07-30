@@ -88,6 +88,22 @@ async function main() {
     check('捲到 p3 時顯示 4/7', (await page.textContent('.progress > span')) === '4/7',
       await page.textContent('.progress > span'));
 
+    // ── 檢查:進度寫進 localStorage,且 key 有 nt- 前綴 ──
+    await page.goto(BASE + '/ep2.html');
+    await page.evaluate(() => {
+      const el = document.getElementById('p3');
+      window.scrollTo(0, el.offsetTop + el.offsetHeight / 2 - innerHeight / 2);
+    });
+    await page.waitForTimeout(900);   // 等節流的 500ms 過去
+    const saved = await page.evaluate(() => localStorage.getItem('nt-progress'));
+    let ok = false, parsed = null;
+    try { parsed = JSON.parse(saved); ok = parsed && parsed.ep === 2 && parsed.page === 3; } catch (e) {}
+    check('進度寫入 nt-progress', ok, saved);
+
+    const keys = await page.evaluate(() => Object.keys(localStorage));
+    check('localStorage 的 key 都有 nt- 前綴',
+      keys.every(k => k.indexOf('nt-') === 0), keys.join(','));
+
     await browser.close();
   } finally {
     server.kill();
