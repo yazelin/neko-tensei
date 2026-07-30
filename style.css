@@ -106,3 +106,9 @@ footer p{margin:.3em 0}
 .newest{margin:.9rem 0 0;font-size:.9rem;color:var(--ink-dim);letter-spacing:.03em}
 .newest a{color:var(--gold);border-bottom:1px solid transparent}
 .newest a:hover{border-bottom-color:var(--gold)}
+
+/* ── 行動版:閱讀頁滿版,要的是連續感 ── */
+@media(max-width:720px){
+  .reader{max-width:none}
+  .reader img{margin:0 0 2px;border-radius:0}
+}
