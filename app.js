@@ -14,6 +14,10 @@
       localStorage.setItem(KEY, JSON.stringify({ ep: ep, page: page, at: Date.now() }));
     } catch (e) { /* 無痕模式寫不進去就算了,不影響閱讀 */ }
   }
+  /* 非負整數(話數、頁碼共用)。字串、小數、NaN、負數一律不算。 */
+  function isIndex(v) {
+    return typeof v === 'number' && isFinite(v) && v >= 0 && Math.floor(v) === v;
+  }
   function throttle(fn, ms) {
     var last = 0, timer = null;
     return function () {
@@ -100,10 +104,15 @@
 
     // 單一 handler,靠 deferred 有沒有值分支。不要用 addEventListener 再疊 onclick,
     // 那會讓「安裝」按下去同時觸發「關於」的跳轉。
+    function labelAbout() { slot.innerHTML = IC.info + '<span>關於</span>'; }
+
     slot.addEventListener('click', function () {
       if (deferred) {
         deferred.prompt();
-        deferred.userChoice.then(function () { deferred = null; });
+        // 不管裝了還是按「以後再說」,這個 event 都不能再用第二次,
+        // 標籤要一起還原——否則按取消之後再點同一格會被丟去誕生故事,
+        // 而 beforeinstallprompt 同一次瀏覽不會再觸發,錯到重新載入為止。
+        deferred.userChoice.then(function () { deferred = null; labelAbout(); });
       } else {
         // 誕生故事只在首頁,用相對路徑,角色頁按下去才不會是死連結
         location.href = './#origin';
@@ -126,16 +135,35 @@
     // 沒有紀錄也整張不出現,不佔位也不顯示假資料
     var prog = readProgress();
     var hero = document.querySelector('.hero');
-    if (!prog || !prog.ep || !hero || !document.body.hasAttribute('data-home')) return;
+    if (!prog || !hero || !document.body.hasAttribute('data-home')) return;
+
+    // nt-progress 不能當可信輸入:yazelin.github.io 是所有 Pages 專案共用的
+    // origin,同 origin 的別的專案寫得進這個 key。話數要真的存在(首頁列表上
+    // 有對應的 epN.html 連結才算),頁碼要是非負整數,文字一律 textContent。
+    var ep = prog.ep, page = prog.page;
+    if (!isIndex(ep) || ep < 1 || !isIndex(page)) return;
+    if (!document.querySelector('a[href="ep' + ep + '.html"]')) return;
 
     var CN = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
-    var where = prog.page === 0 ? '封面' : '第 ' + prog.page + ' 頁';
+    var where = page === 0 ? '封面' : '第 ' + page + ' 頁';
     var card = document.createElement('a');
     card.className = 'resume';
-    card.href = 'ep' + prog.ep + '.html#p' + prog.page;
-    card.innerHTML =
-      '<span class="resume-ic" aria-hidden="true">▶</span>' +
-      '<span class="resume-t">繼續閱讀<small>第' + (CN[prog.ep] || prog.ep) + '話 · ' + where + '</small></span>';
+    card.href = 'ep' + ep + '.html#p' + page;
+
+    var ic = document.createElement('span');
+    ic.className = 'resume-ic';
+    ic.setAttribute('aria-hidden', 'true');
+    ic.textContent = '▶';
+
+    var txt = document.createElement('span');
+    txt.className = 'resume-t';
+    txt.appendChild(document.createTextNode('繼續閱讀'));
+    var sub = document.createElement('small');
+    sub.textContent = '第' + (CN[ep] || ep) + '話 · ' + where;
+    txt.appendChild(sub);
+
+    card.appendChild(ic);
+    card.appendChild(txt);
     hero.insertAdjacentElement('afterbegin', card);
   }
 
