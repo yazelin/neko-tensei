@@ -61,6 +61,15 @@
     }, { rootMargin: '-50% 0px -50% 0px' });   // root 縮成視窗中線那一條
 
     imgs.forEach(function (img) { io.observe(img); });
+
+    // 從首頁的「繼續閱讀」跳進來:圖是 lazy 的,等它有高度再捲
+    if (location.hash) {
+      var target = document.getElementById(location.hash.slice(1));
+      if (target) {
+        requestAnimationFrame(function () { target.scrollIntoView(); });
+        target.addEventListener('load', function () { target.scrollIntoView(); }, { once: true });
+      }
+    }
   }
 
   var IC = {
@@ -112,6 +121,21 @@
     }
     measure();
     window.addEventListener('resize', measure);
+
+    // 繼續閱讀:沒有紀錄就整張不出現,不佔位也不顯示假資料
+    var prog = readProgress();
+    var hero = document.querySelector('.hero');
+    if (!prog || !prog.ep || !hero) return;
+
+    var CN = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
+    var where = prog.page === 0 ? '封面' : '第 ' + prog.page + ' 頁';
+    var card = document.createElement('a');
+    card.className = 'resume';
+    card.href = 'ep' + prog.ep + '.html#p' + prog.page;
+    card.innerHTML =
+      '<span class="resume-ic" aria-hidden="true">▶</span>' +
+      '<span class="resume-t">繼續閱讀<small>第' + (CN[prog.ep] || prog.ep) + '話 · ' + where + '</small></span>';
+    hero.insertAdjacentElement('afterbegin', card);
   }
 
   function boot() {

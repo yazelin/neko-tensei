@@ -163,6 +163,29 @@ async function main() {
       /\/(index\.html)?$/.test(landed.path) && landed.hash === '#origin',
       JSON.stringify(landed));
 
+    // ── 檢查:沒有紀錄時,繼續閱讀卡不出現 ──
+    await page.goto(BASE + '/index.html');
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+    await page.waitForTimeout(300);
+    check('沒紀錄時不顯示繼續閱讀', (await page.$('.resume')) === null);
+
+    // ── 檢查:有紀錄時出現,且點下去落在正確那張圖 ──
+    await page.evaluate(() => localStorage.setItem('nt-progress',
+      JSON.stringify({ ep: 2, page: 3, at: Date.now() })));
+    await page.reload();
+    await page.waitForTimeout(300);
+    const href = await page.getAttribute('.resume', 'href');
+    check('繼續閱讀連到正確位置', /ep2\.html#p3$/.test(href || ''), String(href));
+
+    await page.click('.resume');
+    await page.waitForTimeout(600);
+    const landedOffset = await page.evaluate(() => {
+      const el = document.getElementById('p3');
+      return Math.abs(el.getBoundingClientRect().top);
+    });
+    check('跳轉落在 p3 上緣', landedOffset < 80, String(landedOffset));
+
     await browser.close();
   } finally {
     server.kill();
