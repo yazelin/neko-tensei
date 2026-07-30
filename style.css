@@ -1,0 +1,99 @@
+/* 轉生成貓貓的我們 — 共用樣式 */
+:root{
+  --bg:#12141d; --panel:#1b1e2b; --panel2:#232739;
+  --ink:#e8e6df; --ink-dim:#a8a89f;
+  --pink:#f2a3b3; --gold:#e8c26a; --line:rgba(232,194,106,.22);
+}
+*{box-sizing:border-box}
+html{height:100%}
+body{margin:0;min-height:100dvh;background:var(--bg);color:var(--ink);
+  font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  line-height:1.9;letter-spacing:.02em;
+  background-image:radial-gradient(ellipse 80% 50% at 50% -10%,rgba(90,80,160,.25),transparent);}
+a{color:var(--gold);text-decoration:none}
+a:hover{color:var(--pink)}
+img{max-width:100%;height:auto;display:block}
+.wrap{max-width:760px;margin:0 auto;padding:0 1rem}
+h1,h2,h3{font-family:"Noto Serif TC","Songti TC",Georgia,serif;letter-spacing:.06em;line-height:1.4}
+h2{font-size:1.35rem;margin:3.2rem 0 1.2rem;color:var(--gold)}
+h2::before{content:"";display:inline-block;width:.55em;height:.55em;margin-right:.5em;
+  border-radius:50% 50% 50% 0;background:var(--pink);transform:rotate(-45deg)}
+
+/* 頂欄 */
+.top{display:flex;align-items:center;gap:.7rem;padding:.9rem 0;
+  border-bottom:1px solid var(--line)}
+.top img{width:34px;height:34px;border-radius:9px}
+.top a.site{color:var(--ink);font-family:"Noto Serif TC",serif;letter-spacing:.1em;font-size:1.02rem}
+.top .sp{flex:1}
+
+/* 首頁 hero */
+.hero{text-align:center;padding:2.6rem 0 .6rem}
+.hero h1{font-size:clamp(1.7rem,6vw,2.6rem);margin:.2em 0 .3em;color:var(--ink)}
+.hero h1 .neko{color:var(--pink)}
+.hero p.tag{color:var(--ink-dim);margin:.2em 0 1.6em}
+.cover{position:relative;border-radius:14px;overflow:hidden;
+  box-shadow:0 10px 40px rgba(0,0,0,.55);border:1px solid var(--line)}
+.btn{display:inline-block;background:linear-gradient(135deg,var(--gold),#d9a548);
+  color:#241c08;font-weight:700;letter-spacing:.14em;border-radius:2.2rem;
+  padding:.85rem 2.4rem;margin:1.6rem 0 0;border:0;font-size:1rem;cursor:pointer}
+.btn:hover{filter:brightness(1.08);color:#241c08}
+.btn.ghost{background:none;border:1px solid var(--line);color:var(--ink-dim);font-weight:400}
+.btn.ghost:hover{color:var(--ink)}
+
+/* 卡片列表 */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:1rem;padding:0;list-style:none;margin:0}
+.cards li{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.cards a{display:block;color:var(--ink)}
+.cards img{aspect-ratio:2/3;object-fit:cover;width:100%}
+.cards .cap{padding:.6rem .8rem .8rem;font-size:.92rem}
+.cards .cap small{display:block;color:var(--ink-dim);font-size:.78rem;letter-spacing:.04em}
+.ep-list{list-style:none;padding:0;margin:0}
+.ep-list li{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+  margin:0 0 .8rem;overflow:hidden}
+.ep-list a,.ep-list .soon{display:flex;align-items:center;gap:1rem;padding:.9rem 1.1rem;color:var(--ink)}
+.ep-list .soon{color:var(--ink-dim)}
+.ep-list .no{font-family:"Noto Serif TC",serif;color:var(--gold);white-space:nowrap}
+.ep-list small{color:var(--ink-dim)}
+
+/* 閱讀頁 */
+.reader{max-width:720px;margin:0 auto;padding:0}
+.reader img{width:100%;margin:0 0 6px;border-radius:4px}
+.reader-nav{display:flex;gap:.8rem;justify-content:center;flex-wrap:wrap;padding:1.6rem 1rem 0}
+
+/* 角色頁 */
+.char-hero{border-radius:14px;overflow:hidden;border:1px solid var(--line);
+  box-shadow:0 10px 40px rgba(0,0,0,.5)}
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:1.4rem 0}
+.duo .box{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:1rem 1.2rem}
+.duo .box h3{margin:.1em 0 .5em;font-size:1.02rem;color:var(--pink)}
+.duo .box.past h3{color:var(--ink-dim)}
+.duo .box p{margin:.3em 0;font-size:.94rem;color:var(--ink)}
+.duo .box small{color:var(--ink-dim)}
+@media(max-width:560px){.duo{grid-template-columns:1fr}}
+blockquote{margin:1rem 0;padding:.7rem 1.1rem;background:var(--panel2);border-left:3px solid var(--pink);
+  border-radius:0 10px 10px 0;color:var(--ink);font-family:"Noto Serif TC",serif}
+blockquote small{display:block;color:var(--ink-dim);font-family:"Noto Sans TC",sans-serif}
+.char-nav{display:flex;justify-content:space-between;gap:.8rem;margin:2.2rem 0 0;flex-wrap:wrap}
+
+/* 誕生故事 */
+.origin{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:1.3rem 1.5rem;color:var(--ink)}
+.origin p{margin:.5em 0}
+
+/* footer 四件套 */
+footer{margin:4rem 0 0;padding:2.2rem 1rem calc(2.2rem + env(safe-area-inset-bottom));
+  border-top:1px solid var(--line);text-align:center;color:var(--ink-dim);font-size:.85rem}
+.footer-icons{display:flex;gap:1.4rem;justify-content:center;margin:0 0 1rem}
+.footer-icons a{display:inline-flex;width:42px;height:42px;border-radius:50%;
+  align-items:center;justify-content:center;background:var(--panel);border:1px solid var(--line);color:var(--ink-dim)}
+.footer-icons a:hover{color:var(--gold);border-color:var(--gold)}
+.footer-icons svg{width:20px;height:20px;fill:currentColor}
+footer p{margin:.3em 0}
+
+/* 安裝鈕 */
+#inst{display:none}
+#inst.show{display:inline-block}
+
+@media(prefers-reduced-motion:no-preference){
+  .cover img{transition:transform .6s ease}
+  .cover:hover img{transform:scale(1.015)}
+}

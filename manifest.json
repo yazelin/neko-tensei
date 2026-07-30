@@ -1,0 +1,17 @@
+{
+  "name": "轉生成貓貓的我們",
+  "short_name": "貓貓轉生",
+  "description": "四位深夜加班的工程師，醒來全變成了貓。誕生於 LINE C# 社群閒聊的連載漫畫。",
+  "lang": "zh-Hant-TW",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#12141d",
+  "theme_color": "#12141d",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
