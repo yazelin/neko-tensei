@@ -63,9 +63,53 @@
     imgs.forEach(function (img) { io.observe(img); });
   }
 
+  var IC = {
+    home: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2 12h3v9h6v-6h2v6h6v-9h3z"/></svg>',
+    eps:  '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18v2H3zm0 6h18v2H3zm0 6h18v2H3z"/></svg>',
+    char: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-4 0-8 2-8 5v1h16v-1c0-3-4-5-8-5z"/></svg>',
+    down: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v10l4-4 1.4 1.4L12 16.8 6.6 10.4 8 9l4 4V3zM4 19h16v2H4z"/></svg>',
+    info: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 15h-2v-6h2zm0-8h-2V7h2z"/></svg>'
+  };
+
+  function initShell() {
+    if (document.querySelector('.tabbar')) return;
+
+    var nav = document.createElement('nav');
+    nav.className = 'tabbar';
+    nav.setAttribute('aria-label', '主選單');
+    nav.innerHTML =
+      '<a href="./#top">' + IC.home + '<span>首頁</span></a>' +
+      '<a href="./#episodes">' + IC.eps + '<span>話數</span></a>' +
+      '<a href="./#characters">' + IC.char + '<span>角色</span></a>' +
+      '<button type="button" id="tab4">' + IC.info + '<span>關於</span></button>';
+    document.body.appendChild(nav);
+
+    // 第四格預設是「關於」。只有 beforeinstallprompt 真的觸發了才換成「安裝」——
+    // iOS Safari 永遠不會觸發,不要留一個按了沒反應的按鈕。
+    var slot = nav.querySelector('#tab4');
+    slot.addEventListener('click', function () { location.hash = '#origin'; });
+
+    window.addEventListener('beforeinstallprompt', function (e) {
+      e.preventDefault();
+      var deferred = e;
+      slot.innerHTML = IC.down + '<span>安裝</span>';
+      slot.onclick = function () {
+        deferred.prompt();
+        deferred.userChoice.then(function () { deferred = null; });
+      };
+    });
+
+    function measure() {
+      document.documentElement.style.setProperty('--tabbar-h', nav.offsetHeight + 'px');
+    }
+    measure();
+    window.addEventListener('resize', measure);
+  }
+
   function boot() {
     var reader = document.querySelector('main.reader');
     if (reader) initReader(reader);
+    else initShell();
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
