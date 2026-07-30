@@ -167,10 +167,47 @@
     hero.insertAdjacentElement('afterbegin', card);
   }
 
+
+  /* 討論區(giscus)。捲到附近才載入——第三方 iframe 不該讓通勤讀者一進站就付流量。
+     設定放在 HTML 的 #giscus 佔位元素上,這支只負責在對的時機把 script 塞進去。
+     只帶 data-category-id 不帶 data-category:分類 id 才是 giscus 實際比對的欄位,
+     這樣之後在 GitHub 上把分類改成中文名也不會壞。 */
+  function initGiscus() {
+    var el = document.getElementById('giscus');
+    if (!el || !('IntersectionObserver' in window)) return;
+    var loaded = false;
+    var io = new IntersectionObserver(function (entries) {
+      if (loaded) return;
+      var near = entries.some(function (e) { return e.isIntersecting; });
+      if (!near) return;
+      loaded = true;
+      io.disconnect();
+      var s = document.createElement('script');
+      s.src = 'https://giscus.app/client.js';
+      s.async = true;
+      s.crossOrigin = 'anonymous';
+      s.setAttribute('data-repo', 'yazelin/neko-tensei');
+      s.setAttribute('data-repo-id', 'R_kgDOToGp7w');
+      s.setAttribute('data-category-id', el.dataset.categoryId);
+      s.setAttribute('data-mapping', el.dataset.mapping);
+      if (el.dataset.term) s.setAttribute('data-term', el.dataset.term);
+      s.setAttribute('data-strict', '1');
+      s.setAttribute('data-reactions-enabled', '1');
+      s.setAttribute('data-emit-metadata', '0');
+      s.setAttribute('data-input-position', 'top');
+      s.setAttribute('data-theme', 'dark_dimmed');
+      s.setAttribute('data-lang', 'zh-TW');
+      s.setAttribute('data-loading', 'lazy');
+      el.appendChild(s);
+    }, { rootMargin: '300px' });
+    io.observe(el);
+  }
+
   function boot() {
     var reader = document.querySelector('main.reader');
     if (reader) initReader(reader);
     else initShell();
+    initGiscus();
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
