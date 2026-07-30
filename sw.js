@@ -5,8 +5,8 @@
    HTML network-first、資產 cache-first;match 一律 ignoreSearch+ignoreVary
    (GitHub Pages 回 Vary: Accept-Encoding,不加 ignoreVary 會 miss)。 */
 
-const SHELL = 'nt-shell-v1';
-const ASSET = 'nt-asset-v1';
+const SHELL = 'nt-shell-v2';
+const ASSET = 'nt-asset-v2';
 
 const SHELL_FILES = [
   './', './index.html', './ep1.html',
@@ -17,10 +17,10 @@ const SHELL_FILES = [
 
 /* 背景暖快取,順序=閱讀順序:第一話 8 頁 → 角色圖 → 分享用資產。 */
 const WARM = [
-  './images/00-cover.jpg', './images/01.jpg', './images/02.jpg', './images/03.jpg',
-  './images/04.jpg', './images/05.jpg', './images/06.jpg', './images/07.jpg',
-  './images/char-xiaoniao.jpg', './images/char-xiaobai.jpg',
-  './images/char-uncle.jpg', './images/char-leo.jpg',
+  './images/00-cover.webp', './images/01.webp', './images/02.webp', './images/03.webp',
+  './images/04.webp', './images/05.webp', './images/06.webp', './images/07.webp',
+  './images/char-xiaoniao.webp', './images/char-xiaobai.webp',
+  './images/char-uncle.webp', './images/char-leo.webp',
   './icon-512.png', './og.jpg'
 ];
 

@@ -27,7 +27,7 @@
 index.html          首頁（話數列表、角色、誕生故事）
 ep1.html            第一話閱讀頁
 char-*.html         角色介紹頁（每位主角一頁）
-images/             漫畫頁（00-cover、01–07）與角色對照圖（char-*.jpg）
+images/             漫畫頁（00-cover、01–07，webp）與角色對照圖（char-*.webp）
 manifest.json sw.js PWA：可安裝、離線閱讀（SHELL/ASSET 兩層快取）
 ```
 
