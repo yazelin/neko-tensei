@@ -45,6 +45,18 @@ async function main() {
     const title = await page.title();
     check('首頁載入', title.includes('轉生成貓貓的我們'), title);
 
+    // ── 檢查:閱讀頁每張圖有 id,且手機上滿版 ──
+    await page.goto(BASE + '/ep2.html');
+    const ids = await page.$$eval('main.reader img', els => els.map(e => e.id));
+    check('閱讀頁圖片有 id', ids.length === 7 && ids[0] === 'p0' && ids[6] === 'p6', ids.join(','));
+
+    const epAttr = await page.getAttribute('body', 'data-ep');
+    check('body 有 data-ep', epAttr === '2', String(epAttr));
+
+    const vw = page.viewportSize().width;
+    const imgW = await page.$eval('#p1', e => e.getBoundingClientRect().width);
+    check('手機上圖片滿版', Math.abs(imgW - vw) < 1, `img ${imgW} vs viewport ${vw}`);
+
     await browser.close();
   } finally {
     server.kill();

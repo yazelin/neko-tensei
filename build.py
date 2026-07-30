@@ -52,7 +52,7 @@ HEAD = """<!doctype html><html lang="zh-Hant-TW"><head><meta charset="utf-8">
 "url":"{url}",
 "image":"{base}og.jpg"}}
 </script>
-</head><body>
+</head><body data-ep="{n}">
 
 <div class="wrap">
   <nav class="top">
@@ -81,7 +81,8 @@ def build_episode(ep, prev, nxt):
                        url=url, base=BASE, n=ep['n'])]
     for i, p in enumerate(ep['pages']):
         extra = ' fetchpriority="high"' if i == 0 else ' loading="lazy"'
-        out.append(f'  <img src="images/ep{ep["n"]}/{p["f"]}" width="1024" height="1536"{extra}\n'
+        out.append(f'  <img id="p{i}" src="images/ep{ep["n"]}/{p["f"]}"\n'
+                   f'       width="1024" height="1536"{extra}\n'
                    f'       alt="{p["alt"]}">\n')
     out.append('  <p class="credit">%s</p>\n' % ep['credit'])
     out.append('  <nav class="reader-nav">\n    <a class="btn ghost" href="./">回首頁</a>\n')
