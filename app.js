@@ -87,16 +87,24 @@
     // 第四格預設是「關於」。只有 beforeinstallprompt 真的觸發了才換成「安裝」——
     // iOS Safari 永遠不會觸發,不要留一個按了沒反應的按鈕。
     var slot = nav.querySelector('#tab4');
-    slot.addEventListener('click', function () { location.hash = '#origin'; });
+    var deferred = null;
+
+    // 單一 handler,靠 deferred 有沒有值分支。不要用 addEventListener 再疊 onclick,
+    // 那會讓「安裝」按下去同時觸發「關於」的跳轉。
+    slot.addEventListener('click', function () {
+      if (deferred) {
+        deferred.prompt();
+        deferred.userChoice.then(function () { deferred = null; });
+      } else {
+        // 誕生故事只在首頁,用相對路徑,角色頁按下去才不會是死連結
+        location.href = './#origin';
+      }
+    });
 
     window.addEventListener('beforeinstallprompt', function (e) {
       e.preventDefault();
-      var deferred = e;
+      deferred = e;
       slot.innerHTML = IC.down + '<span>安裝</span>';
-      slot.onclick = function () {
-        deferred.prompt();
-        deferred.userChoice.then(function () { deferred = null; });
-      };
     });
 
     function measure() {
