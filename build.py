@@ -16,6 +16,10 @@ SITE = CFG['site']['title']
 EPS = CFG['episodes']
 FOOTER = (ROOT / 'partials' / 'footer.html').read_text('utf-8')
 
+# GitHub Discussions 的分類 id。用 id 不用名稱——之後在 GitHub 上把分類
+# 改成中文名也不會壞,giscus 實際比對的是 id。
+GENERAL_CAT = 'DIC_kwDOToGp784DCVjJ'   # 內建 General,每話一串
+
 HEAD = """<!doctype html><html lang="zh-Hant-TW"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>{h1}｜{site}</title>
@@ -93,6 +97,9 @@ def build_episode(ep, prev, nxt):
         out.append(f'    <span class="btn ghost" aria-disabled="true" style="opacity:.45">'
                    f'第{zh(ep["n"] + 1)}話 未完待續……</span>\n')
     out.append('  </nav>\n</main>\n\n')
+    out.append('<section class="wrap talk">\n  <h2>這一話的討論</h2>\n'
+               f'  <div id="giscus" data-category-id="{GENERAL_CAT}" data-mapping="pathname"></div>\n'
+               '</section>\n\n')
     out.append(f'<div class="progress" aria-hidden="true"><i></i>'
                f'<span>1/{len(ep["pages"])}</span></div>\n\n')
     out.append(FOOTER)
