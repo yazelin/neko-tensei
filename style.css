@@ -112,3 +112,16 @@ footer p{margin:.3em 0}
   .reader{max-width:none}
   .reader img{margin:0 0 2px;border-radius:0}
 }
+
+/* ── 行動版:閱讀頁固定頂欄 ── */
+.reader-top{position:fixed;top:0;left:0;right:0;z-index:100;
+  display:flex;align-items:center;gap:.8rem;padding:.7rem 1rem;
+  background:rgba(18,20,29,.92);backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--line);
+  transition:transform .25s ease}
+.reader-top.hide{transform:translateY(-100%)}
+.reader-top .back,.reader-top .eps{color:var(--ink-dim);font-size:1.3rem;line-height:1;flex:none}
+.reader-top .back:hover,.reader-top .eps:hover{color:var(--gold)}
+.reader-top .ttl{flex:1;min-width:0;font-size:.95rem;color:var(--ink);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.reader{padding-top:52px}

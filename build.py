@@ -44,6 +44,7 @@ HEAD = """<!doctype html><html lang="zh-Hant-TW"><head><meta charset="utf-8">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="stylesheet" href="style.css">
+<script src="app.js" defer></script>
 <script type="application/ld+json">
 {{"@context":"https://schema.org","@type":"ComicIssue","issueNumber":{n},
 "name":"{h1}","inLanguage":"zh-Hant-TW",
@@ -54,14 +55,11 @@ HEAD = """<!doctype html><html lang="zh-Hant-TW"><head><meta charset="utf-8">
 </script>
 </head><body data-ep="{n}">
 
-<div class="wrap">
-  <nav class="top">
-    <img src="icon-192.png" alt="" width="34" height="34">
-    <a class="site" href="./">{site}</a>
-    <span class="sp"></span>
-    <a href="./#characters">角色</a>
-  </nav>
-</div>
+<nav class="reader-top">
+  <a class="back" href="./" aria-label="回首頁">‹</a>
+  <span class="ttl">{h1}</span>
+  <a class="eps" href="./#episodes" aria-label="話數">☰</a>
+</nav>
 
 <main class="reader">
   <h1 style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">{h1}</h1>
