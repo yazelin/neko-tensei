@@ -191,6 +191,10 @@ async function main() {
     await page.waitForTimeout(300);
     check('角色頁不顯示繼續閱讀', (await page.$('.resume')) === null);
 
+    // ── 檢查:app.js 有進離線殼快取,否則離線時行動版行為全失效 ──
+    const sw = await (await fetch(BASE + '/sw.js')).text();
+    check('sw.js 的 SHELL 含 app.js', sw.includes("'./app.js'"));
+
     await browser.close();
   } finally {
     server.kill();
