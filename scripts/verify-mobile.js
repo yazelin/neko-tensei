@@ -407,6 +407,21 @@ async function main() {
     check('兩處用不同分類', !!gis && !!gis2 && gis.cat !== gis2.cat,
       `${gis && gis.cat} vs ${gis2 && gis2.cat}`);
 
+
+    // ── 檢查:sw.js 不能用全域 caches.match() 服務非 HTML 資源 ──
+    // 全域 match 會搜遍所有快取,把執行期 ASSET 裡的舊 style.css / app.js
+    // 撈出來蓋掉新版;而 ASSET 只有換圖才 bump,那種副本會活很久。
+    // 這個 bug 讓討論區的 CSS/JS 上線後在瀏覽器上完全沒生效。
+    {
+      const swSrc = await (await fetch(BASE + '/sw.js')).text();
+      const assetBranch = swSrc.slice(swSrc.indexOf('} else {'));
+      check('sw.js 的非 HTML 分支不用全域 caches.match',
+        !/caches\.match\(/.test(assetBranch), assetBranch.slice(0, 80).replace(/\n/g, ' '));
+      check('sw.js 有殼檔網址集合可用來分流', /SHELL_URLS/.test(swSrc));
+      check('sw.js 會清掉 ASSET 裡誤存的殼檔',
+        /a\.delete\(r\)/.test(swSrc) || /\.delete\(r\)/.test(swSrc));
+    }
+
     await browser.close();
 
     check('整輪沒有 console error 或 pageerror', consoleErrors.length === 0,
