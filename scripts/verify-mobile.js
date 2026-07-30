@@ -3,11 +3,16 @@
    全域裝的是 playwright@1.54.1;這個 repo 沒有 package.json,不要新增。 */
 const { chromium, devices } = require('playwright');
 const { spawn } = require('child_process');
+const net = require('net');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..');
-const PORT = 8899;
-const BASE = `http://127.0.0.1:${PORT}`;
+let BASE = '';
+
+/* Chromium 的 device emulation 不模擬 safe area,env(safe-area-inset-*) 一律回 0,
+   凡是「有 inset 才會壞」的版面都驗不到。用這組固定值假裝 iPhone 的瀏海與 home
+   indicator——數字取 iPhone 13 直立時的實際值。 */
+const INSET = { top: 47, bottom: 34, left: 0, right: 0 };
 
 const results = [];
 function check(name, ok, detail) {
@@ -15,30 +20,80 @@ function check(name, ok, detail) {
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? '  — ' + detail : ''}`);
 }
 
-function serve() {
-  const p = spawn('python3', ['-m', 'http.server', String(PORT), '--bind', '127.0.0.1'],
+/* 固定 port 會撞上別的專案留在背景的 http.server——那時整輪其實是在驗別人的站,
+   而且會「看起來只是壞掉」而不是「port 被佔」。改成每次要一個空的 port。 */
+function freePort() {
+  return new Promise((resolve, reject) => {
+    const s = net.createServer();
+    s.on('error', reject);
+    s.listen(0, '127.0.0.1', () => {
+      const p = s.address().port;
+      s.close(() => resolve(p));
+    });
+  });
+}
+
+function serve(port) {
+  return spawn('python3', ['-m', 'http.server', String(port), '--bind', '127.0.0.1'],
     { cwd: ROOT, stdio: 'ignore' });
-  return p;
 }
 
 async function waitForServer() {
   for (let i = 0; i < 50; i++) {
     try {
       const r = await fetch(BASE + '/index.html');
-      if (r.ok) return;
-    } catch (e) { /* 還沒起來 */ }
+      if (r.ok) {
+        const t = await r.text();
+        if (!t.includes('轉生成貓貓的我們')) throw new Error(`${BASE} 上的不是這個站`);
+        return;
+      }
+    } catch (e) {
+      if (/不是這個站/.test(e.message)) throw e;   /* 還沒起來 */
+    }
     await new Promise(r => setTimeout(r, 100));
   }
   throw new Error('本機伺服器沒起來');
 }
 
+/* 全程收 console error 與未捕捉例外,最後一項檢查斷言整輪乾淨。 */
+const consoleErrors = [];
+async function newPage(ctx) {
+  const page = await ctx.newPage();
+  page.on('pageerror', e => consoleErrors.push('pageerror: ' + e.message));
+  page.on('console', m => {
+    if (m.type() === 'error') consoleErrors.push('console: ' + m.text());
+  });
+  return page;
+}
+
+/* 在 document_start 掛鉤,載入後把 style.css 裡的 env(safe-area-inset-*) 換成
+   固定 px 再整份補一次(同權重、後蓋前),用來驗有 inset 時的版面。 */
+async function injectInsets(page) {
+  await page.addInitScript(inset => {
+    var apply = function () {
+      fetch('./style.css').then(function (r) { return r.text(); }).then(function (css) {
+        var s = document.createElement('style');
+        s.id = '__insets';
+        s.textContent = css.replace(
+          /env\(\s*safe-area-inset-(top|bottom|left|right)\s*(?:,[^()]*)?\)/g,
+          function (_, side) { return inset[side] + 'px'; });
+        document.head.appendChild(s);
+      });
+    };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', apply);
+    else apply();
+  }, INSET);
+}
+
 async function main() {
-  const server = serve();
+  const port = await freePort();
+  BASE = `http://127.0.0.1:${port}`;
+  const server = serve(port);
   try {
     await waitForServer();
     const browser = await chromium.launch();
     const ctx = await browser.newContext({ ...devices['iPhone 13'] });
-    const page = await ctx.newPage();
+    const page = await newPage(ctx);
 
     // ── 檢查:站台起得來,首頁標題正確 ──
     await page.goto(BASE + '/index.html');
@@ -56,6 +111,13 @@ async function main() {
     const vw = page.viewportSize().width;
     const imgW = await page.$eval('#p1', e => e.getBoundingClientRect().width);
     check('手機上圖片滿版', Math.abs(imgW - vw) < 1, `img ${imgW} vs viewport ${vw}`);
+
+    // 閱讀頁沒有 tabbar,就不該吃 --tabbar-h 的 fallback——否則 footer 下面
+    // 每一頁都多一塊 56px 的空白
+    const readerPadB = await page.evaluate(() =>
+      parseFloat(getComputedStyle(document.body).paddingBottom));
+    check('閱讀頁底部沒有多餘留白', readerPadB < 1, `${readerPadB}px`);
+    check('閱讀頁沒有 tabbar', (await page.$('.tabbar')) === null);
 
     // ── 檢查:閱讀頁頂欄固定且自動隱現 ──
     await page.goto(BASE + '/ep2.html');
@@ -148,6 +210,39 @@ async function main() {
       promptCalled && hashAfterInstallClick !== '#origin',
       `prompted=${promptCalled} hash=${hashAfterInstallClick}`);
 
+    // ── 檢查:安裝表單按「以後再說」之後,第四格要變回「關於」 ──
+    // beforeinstallprompt 同一次瀏覽不會再觸發,標籤沒還原就會一路錯到重新載入,
+    // 讀者以為自己在點「安裝」,實際被丟去誕生故事。
+    await page.goto(BASE + '/index.html');
+    await page.waitForTimeout(300);
+    await page.evaluate(() => {
+      const ev = new Event('beforeinstallprompt', { cancelable: true });
+      ev.prompt = () => {};
+      ev.userChoice = Promise.resolve({ outcome: 'dismissed' });
+      window.dispatchEvent(ev);
+    });
+    await page.waitForTimeout(100);
+    const labelBefore = await page.textContent('#tab4');
+    await page.click('#tab4');
+    await page.waitForTimeout(300);
+    const labelAfter = await page.textContent('#tab4');
+    check('取消安裝後第四格還原成「關於」',
+      labelBefore.trim() === '安裝' && labelAfter.trim() === '關於',
+      `${labelBefore.trim()} → ${labelAfter.trim()}`);
+
+    // 再點一次:標籤寫什麼就要做什麼。deferred 已經被清掉,行為必定是跳 #origin,
+    // 所以這裡要驗的是「按下去的當下標籤是不是還騙人寫著安裝」。
+    const labelAtClick = (await page.textContent('#tab4')).trim();
+    await Promise.all([
+      page.waitForNavigation({ waitUntil: 'load' }).catch(() => {}),
+      page.click('#tab4'),
+    ]);
+    await page.waitForTimeout(200);
+    const hash2 = await page.evaluate(() => location.hash);
+    check('取消安裝後第四格的標籤與行為一致',
+      labelAtClick === '關於' && hash2 === '#origin',
+      `標籤=${labelAtClick} 落點=${hash2}`);
+
     // ── 檢查:角色頁的「關於」要導到首頁的誕生故事,不是死連結 ──
     // 舊寫法用 location.hash = '#origin',但 char-*.html 沒有 id="origin",
     // 點下去網址變成 char-kojiro.html#origin,畫面毫無反應。
@@ -191,11 +286,100 @@ async function main() {
     await page.waitForTimeout(300);
     check('角色頁不顯示繼續閱讀', (await page.$('.resume')) === null);
 
+    // ── 檢查:nt-progress 是髒的就整張不出現,更不能把內容注進 DOM ──
+    // yazelin.github.io 是所有 Pages 專案共用的 origin,這個 key 別的專案寫得進來。
+    const dirty = [
+      ['缺 page', { ep: 2 }],
+      ['話數不存在', { ep: 99, page: 3 }],
+      ['ep 帶標籤', { ep: '<img src=x onerror="window.__xss=1">', page: 1 }],
+      ['page 帶標籤', { ep: 2, page: '<img src=x onerror="window.__xss=1">' }],
+      ['page 為負', { ep: 2, page: -1 }],
+      ['page 非整數', { ep: 2, page: 1.5 }],
+    ];
+    const bad = [];
+    for (const [label, payload] of dirty) {
+      await page.goto(BASE + '/index.html');
+      await page.evaluate(p => localStorage.setItem('nt-progress', JSON.stringify(p)), payload);
+      await page.reload();
+      await page.waitForTimeout(250);
+      const state = await page.evaluate(() => ({
+        card: !!document.querySelector('.resume'),
+        injected: !!document.querySelector('.hero img[src="x"]'),
+        xss: window.__xss === true,
+      }));
+      if (state.card || state.injected || state.xss) bad.push(label + ':' + JSON.stringify(state));
+    }
+    check('髒的 nt-progress 不出卡也不注入 DOM', bad.length === 0, bad.join(' | '));
+
     // ── 檢查:app.js 有進離線殼快取,否則離線時行動版行為全失效 ──
+    // 只在 shell 區塊裡找:整份檔案做字串比對的話,app.js 掉到 WARM 也會通過。
     const sw = await (await fetch(BASE + '/sw.js')).text();
-    check('sw.js 的 SHELL 含 app.js', sw.includes("'./app.js'"));
+    const s0 = sw.indexOf('/* shell:start */'), s1 = sw.indexOf('/* shell:end */');
+    const shellBlock = s0 >= 0 && s1 > s0 ? sw.slice(s0, s1) : '';
+    check('sw.js 的 SHELL 區塊含 app.js', shellBlock.includes("'./app.js'"),
+      shellBlock ? '' : '找不到 shell 標記');
+
+    // ── 檢查:有 safe area 的機型上,版面是「墊高」而不是「變成一片色塊」 ──
+    // Chromium 不模擬 inset,不注入固定值的話這幾項在 inset=0 時必然成立。
+    const ctxI = await browser.newContext({ ...devices['iPhone 13'] });
+    const pageI = await newPage(ctxI);
+    await injectInsets(pageI);
+
+    await pageI.goto(BASE + '/ep2.html');
+    await pageI.waitForFunction(() => !!document.getElementById('__insets'));
+    await pageI.waitForTimeout(200);
+    const pr = await pageI.$eval('.progress', e => {
+      const r = e.getBoundingClientRect();
+      const i = e.querySelector('i').getBoundingClientRect();
+      return { h: r.height, bottom: r.bottom, barH: i.height, barTop: i.top - r.top };
+    });
+    const vhI = pageI.viewportSize().height;
+    check('有 inset 時進度條只墊高、不變成色塊',
+      Math.abs(pr.h - (3 + INSET.bottom)) < 1 && Math.abs(pr.bottom - vhI) < 1,
+      JSON.stringify(pr));
+    check('有 inset 時金色進度條仍是 3px 且貼在軌道頂端',
+      Math.abs(pr.barH - 3) < 1 && Math.abs(pr.barTop) < 1, JSON.stringify(pr));
+
+    const rt = await pageI.$eval('.reader-top', e => ({
+      padTop: parseFloat(getComputedStyle(e).paddingTop),
+      bottom: e.getBoundingClientRect().bottom,
+    }));
+    const firstImgTop = await pageI.$eval('#p0', e => e.getBoundingClientRect().top);
+    check('有 inset 時頂欄避開狀態列',
+      rt.padTop >= INSET.top && firstImgTop >= rt.bottom - 1,
+      `padTop=${rt.padTop} 頂欄底=${rt.bottom} 第一張圖=${firstImgTop}`);
+
+    await pageI.goto(BASE + '/index.html');
+    await pageI.waitForFunction(() => !!document.getElementById('__insets'));
+    await pageI.waitForTimeout(300);
+    const tbI = await pageI.$eval('.tabbar', e => ({
+      h: e.getBoundingClientRect().height,
+      bottom: e.getBoundingClientRect().bottom,
+      padB: parseFloat(getComputedStyle(e).paddingBottom),
+    }));
+    check('有 inset 時 tabbar 往上墊高且仍貼底',
+      Math.abs(tbI.padB - INSET.bottom) < 1 &&
+      Math.abs(tbI.h - (tb.h + INSET.bottom)) < 1 &&
+      Math.abs(tbI.bottom - vhI) < 1,
+      `${JSON.stringify(tbI)} vs 無 inset 高度 ${tb.h}`);
+
+    await ctxI.close();
+
+    // ── 檢查:JS 沒跑時,進度條不顯示寫死的假進度 ──
+    // 擋掉 app.js 來模擬。這一頁的載入錯誤是故意製造的,不掛 console 收集。
+    const ctxNoJs = await browser.newContext({ ...devices['iPhone 13'] });
+    await ctxNoJs.route('**/app.js', r => r.abort());
+    const pageN = await ctxNoJs.newPage();
+    await pageN.goto(BASE + '/ep2.html');
+    await pageN.waitForTimeout(200);
+    const barNoJs = await pageN.$eval('.progress > i', e => e.getBoundingClientRect().width);
+    check('沒有 JS 時進度條不顯示假進度', barNoJs < 1, `${barNoJs}px`);
+    await ctxNoJs.close();
 
     await browser.close();
+
+    check('整輪沒有 console error 或 pageerror', consoleErrors.length === 0,
+      consoleErrors.slice(0, 5).join(' | '));
   } finally {
     server.kill();
   }
