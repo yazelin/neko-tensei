@@ -104,6 +104,30 @@ async function main() {
     check('localStorage 的 key 都有 nt- 前綴',
       keys.length > 0 && keys.every(k => k.indexOf('nt-') === 0), keys.join(','));
 
+    // ── 檢查:首頁 tabbar 固定在底部且沒被 home indicator 蓋住 ──
+    await page.goto(BASE + '/index.html');
+    await page.waitForTimeout(300);
+    const vh = page.viewportSize().height;
+    const tb = await page.$eval('.tabbar', e => {
+      const r = e.getBoundingClientRect();
+      return { top: r.top, bottom: r.bottom, h: r.height };
+    });
+    check('tabbar 貼在視窗底部', Math.abs(tb.bottom - vh) < 1, JSON.stringify(tb));
+
+    const tabs = await page.$$eval('.tabbar > *', els => els.map(e => e.textContent.trim()));
+    check('tabbar 有四格', tabs.length === 4, tabs.join('/'));
+
+    const varH = await page.evaluate(() =>
+      getComputedStyle(document.documentElement).getPropertyValue('--tabbar-h').trim());
+    check('--tabbar-h 有量出來', parseFloat(varH) > 30, varH);
+
+    const padB = await page.evaluate(() =>
+      parseFloat(getComputedStyle(document.body).paddingBottom));
+    check('內容底部有留出 tabbar 的高度', padB >= tb.h - 1, `${padB} vs ${tb.h}`);
+
+    // 第四格在沒有 beforeinstallprompt 的環境(等同 iOS)要是「關於」,不是死按鈕
+    check('第四格降級為關於', tabs[3] === '關於', tabs[3]);
+
     await browser.close();
   } finally {
     server.kill();
