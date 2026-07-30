@@ -102,7 +102,7 @@ async function main() {
 
     const keys = await page.evaluate(() => Object.keys(localStorage));
     check('localStorage 的 key 都有 nt- 前綴',
-      keys.every(k => k.indexOf('nt-') === 0), keys.join(','));
+      keys.length > 0 && keys.every(k => k.indexOf('nt-') === 0), keys.join(','));
 
     await browser.close();
   } finally {
