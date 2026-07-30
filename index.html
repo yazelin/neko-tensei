@@ -100,23 +100,22 @@
 <script>
 if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js');
 
-/* 安裝鈕：三態（installed 永久／時間戳之前安靜／正常顯示） */
+/* 安裝鈕：只有「真的裝了」才永久隱藏。
+   使用者自己點的按鈕,取消原生對話框不做任何持久靜音——
+   同次瀏覽先收起(事件已被消耗,無法再 prompt),Chrome 重發事件或下次載入就會再出現。 */
 (function(){
   var KEY='nt-install', btn=document.getElementById('inst'), deferred=null;
-  function quiet(){var v=localStorage.getItem(KEY);
-    if(v==='installed')return true;
-    if(v && Date.now()<+v)return true;
-    return false;}
+  var v=localStorage.getItem(KEY);
+  if(v && v!=='installed')localStorage.removeItem(KEY);   // 清掉舊版寫入的 14 天靜音時間戳
   window.addEventListener('beforeinstallprompt',function(e){
     e.preventDefault(); deferred=e;
-    if(!quiet())btn.classList.add('show');
+    if(localStorage.getItem(KEY)!=='installed')btn.classList.add('show');
   });
   btn.addEventListener('click',function(){
     if(!deferred)return;
     deferred.prompt();
     deferred.userChoice.then(function(r){
       if(r.outcome==='accepted')localStorage.setItem(KEY,'installed');
-      else localStorage.setItem(KEY,String(Date.now()+14*864e5));
       btn.classList.remove('show'); deferred=null;
     });
   });

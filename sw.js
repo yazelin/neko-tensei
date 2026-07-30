@@ -5,7 +5,7 @@
    HTML network-first、資產 cache-first;match 一律 ignoreSearch+ignoreVary
    (GitHub Pages 回 Vary: Accept-Encoding,不加 ignoreVary 會 miss)。 */
 
-const SHELL = 'nt-shell-v2';
+const SHELL = 'nt-shell-v3';
 const ASSET = 'nt-asset-v3';
 
 const SHELL_FILES = [
