@@ -6,7 +6,7 @@
    (GitHub Pages 回 Vary: Accept-Encoding,不加 ignoreVary 會 miss)。 */
 
 const SHELL = 'nt-shell-v10';
-const ASSET = 'nt-asset-v10';
+const ASSET = 'nt-asset-v9';
 
 /* 以下兩份清單由 build.py 從 episodes.json 產生,別手改。 */
 const SHELL_FILES = [
