@@ -376,6 +376,37 @@ async function main() {
     check('沒有 JS 時進度條不顯示假進度', barNoJs < 1, `${barNoJs}px`);
     await ctxNoJs.close();
 
+
+    // ── 檢查:討論區佔位存在,且捲到之前不該載入第三方 script ──
+    await page.goto(BASE + '/index.html');
+    await page.waitForTimeout(300);
+    const gis = await page.$eval('#giscus', e => ({
+      cat: e.dataset.categoryId, map: e.dataset.mapping, term: e.dataset.term || ''
+    })).catch(() => null);
+    check('首頁有劇情許願佔位',
+      !!gis && gis.map === 'specific' && gis.term === '劇情許願' && /^DIC_/.test(gis.cat),
+      JSON.stringify(gis));
+
+    const beforeScroll = await page.$$eval('script[src*="giscus.app"]', els => els.length);
+    check('沒捲到就不載入 giscus', beforeScroll === 0, String(beforeScroll));
+
+    await page.evaluate(() => document.getElementById('giscus').scrollIntoView());
+    await page.waitForTimeout(600);
+    const afterScroll = await page.$$eval('script[src*="giscus.app"]', els => els.length);
+    check('捲到才載入 giscus', afterScroll === 1, String(afterScroll));
+
+    await page.goto(BASE + '/ep2.html');
+    await page.waitForTimeout(300);
+    const gis2 = await page.$eval('#giscus', e => ({
+      cat: e.dataset.categoryId, map: e.dataset.mapping, term: e.dataset.term || ''
+    })).catch(() => null);
+    check('閱讀頁有每話討論佔位(pathname 對應,無 term)',
+      !!gis2 && gis2.map === 'pathname' && gis2.term === '' && /^DIC_/.test(gis2.cat),
+      JSON.stringify(gis2));
+
+    check('兩處用不同分類', !!gis && !!gis2 && gis.cat !== gis2.cat,
+      `${gis && gis.cat} vs ${gis2 && gis2.cat}`);
+
     await browser.close();
 
     check('整輪沒有 console error 或 pageerror', consoleErrors.length === 0,
