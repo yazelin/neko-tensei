@@ -97,3 +97,7 @@ footer p{margin:.3em 0}
   .cover img{transition:transform .6s ease}
   .cover:hover img{transform:scale(1.015)}
 }
+
+/* 每話末尾的作畫掛名 */
+.credit{max-width:1024px;margin:.9rem auto 0;padding:0 .4rem;
+  color:var(--ink-dim);font-size:.82rem;text-align:right;letter-spacing:.03em}
