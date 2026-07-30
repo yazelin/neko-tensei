@@ -5,8 +5,8 @@
    HTML network-first、資產 cache-first;match 一律 ignoreSearch+ignoreVary
    (GitHub Pages 回 Vary: Accept-Encoding,不加 ignoreVary 會 miss)。 */
 
-const SHELL = 'nt-shell-v5';
-const ASSET = 'nt-asset-v5';
+const SHELL = 'nt-shell-v6';
+const ASSET = 'nt-asset-v6';
 
 /* 以下兩份清單由 build.py 從 episodes.json 產生,別手改。 */
 const SHELL_FILES = [
@@ -18,14 +18,14 @@ const SHELL_FILES = [
   './icon-192.png', './icon-180.png', './favicon-32.png'/* shell:end */
 ];
 
-/* 背景暖快取,順序=最新一話先暖 → 舊話 → 角色圖 → 分享用資產。 */
+/* 背景暖快取,順序=閱讀順序(第一話起) → 角色圖 → 分享用資產。 */
 const WARM = [
 /* warm:start */
-  './images/ep2/00-cover.webp', './images/ep2/01.webp', './images/ep2/02.webp',
-  './images/ep2/03.webp', './images/ep2/04.webp', './images/ep2/05.webp',
-  './images/ep2/06.webp', './images/ep1/00-cover.webp', './images/ep1/01.webp',
-  './images/ep1/02.webp', './images/ep1/03.webp', './images/ep1/04.webp',
-  './images/ep1/05.webp', './images/ep1/06.webp', './images/ep1/07.webp',
+  './images/ep1/00-cover.webp', './images/ep1/01.webp', './images/ep1/02.webp',
+  './images/ep1/03.webp', './images/ep1/04.webp', './images/ep1/05.webp',
+  './images/ep1/06.webp', './images/ep1/07.webp', './images/ep2/00-cover.webp',
+  './images/ep2/01.webp', './images/ep2/02.webp', './images/ep2/03.webp',
+  './images/ep2/04.webp', './images/ep2/05.webp', './images/ep2/06.webp',
   './images/char-xiaoniao.webp', './images/char-xiaobai.webp', './images/char-uncle.webp',
   './images/char-leo.webp', './images/char-kojiro.webp', './icon-512.png', './og.jpg'/* warm:end */
 ];

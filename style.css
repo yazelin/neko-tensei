@@ -101,3 +101,8 @@ footer p{margin:.3em 0}
 /* 每話末尾的作畫掛名 */
 .credit{max-width:1024px;margin:.9rem auto 0;padding:0 .4rem;
   color:var(--ink-dim);font-size:.82rem;text-align:right;letter-spacing:.03em}
+
+/* 首頁大圖下方的「最新一話」輔助入口 */
+.newest{margin:.9rem 0 0;font-size:.9rem;color:var(--ink-dim);letter-spacing:.03em}
+.newest a{color:var(--gold);border-bottom:1px solid transparent}
+.newest a:hover{border-bottom-color:var(--gold)}
