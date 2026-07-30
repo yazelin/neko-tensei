@@ -92,6 +92,8 @@ def build_episode(ep, prev, nxt):
         out.append(f'    <span class="btn ghost" aria-disabled="true" style="opacity:.45">'
                    f'第{zh(ep["n"] + 1)}話 未完待續……</span>\n')
     out.append('  </nav>\n</main>\n\n')
+    out.append(f'<div class="progress" aria-hidden="true"><i></i>'
+               f'<span>1/{len(ep["pages"])}</span></div>\n\n')
     out.append(FOOTER)
     (ROOT / f'ep{ep["n"]}.html').write_text(''.join(out), 'utf-8')
 
