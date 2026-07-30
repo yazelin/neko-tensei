@@ -6,9 +6,9 @@
 
 | 誰 | 做什麼 |
 |---|---|
-| LINE C# 社群群友 | 角色本體（暱稱＝角色）、哏、有時親自作畫 |
+| [LINE C# 社群](https://line.me/ti/g2/PmukABqgPFrk7tMm8qt3AtHyvtNPY4dVd1HRXw)群友 | 角色本體（暱稱＝角色）、哏、有時親自作畫 |
 | 荒坂小次郎 | 第二話封面（他本人就是那隻紅眼魔王） |
-| 擎添助理（AI） | 第一話原畫初稿 |
+| [擎添助理](https://ai.ching-tech.com/ctos-lite)（AI） | 第一話原畫初稿 |
 | Claude × gpt-image-2 | 網站、角色頁、第二話起的分鏡與作畫 |
 | 林亞澤 | 站台、劇本統籌、最後拍板 |
 

@@ -6,14 +6,14 @@
 
 ## 誕生故事
 
-2026-07-30，LINE 的 C# 社群裡一場閒聊。聊著聊著，群友的暱稱一個個變成了角色，AI「擎添助理」把這些哏畫成了漫畫原畫初稿，於是有了這部作品。
+2026-07-30，[LINE 的 C# 社群](https://line.me/ti/g2/PmukABqgPFrk7tMm8qt3AtHyvtNPY4dVd1HRXw)裡一場閒聊。聊著聊著，群友的暱稱一個個變成了角色，AI「[擎添助理](https://ai.ching-tech.com/ctos-lite)」把這些哏畫成了漫畫原畫初稿，於是有了這部作品。
 
 後續由 Claude 搭配 gpt-image-2 接手：做成可離線閱讀的 PWA 網站、補上角色頁，並生成第二話的內容。
 
 第二話的封面由社群裡的荒坂小次郎親手畫成——交稿之後大家才發現，那隻紅眼睛的魔王貓就是他自己。
 
-- 點子與哏：LINE C# 社群群友
-- 原畫初稿：擎添助理（AI）
+- 點子與哏：[LINE C# 社群](https://line.me/ti/g2/PmukABqgPFrk7tMm8qt3AtHyvtNPY4dVd1HRXw)群友
+- 原畫初稿：[擎添助理](https://ai.ching-tech.com/ctos-lite)（AI）
 - 第二話封面：荒坂小次郎
 - 網站、角色頁、第二話內容：Claude × gpt-image-2
 - 統籌與拍板：林亞澤
@@ -61,4 +61,4 @@ manifest.json sw.js   PWA:可安裝、離線閱讀(SHELL/ASSET 兩層快取)
 
 ## 授權
 
-圖文內容採 [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/deed.zh-hant) 授權．林亞澤與 LINE C# 社群群友。
+圖文內容採 [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/deed.zh-hant) 授權．林亞澤與 [LINE C# 社群](https://line.me/ti/g2/PmukABqgPFrk7tMm8qt3AtHyvtNPY4dVd1HRXw)群友。
