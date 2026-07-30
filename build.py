@@ -154,7 +154,7 @@ def main():
     shell = ["  './', './index.html',"]
     shell.append('  ' + ' '.join(f"'./ep{e['n']}.html'," for e in EPS))
     shell.append('  ' + ' '.join(f"'./char-{c['slug']}.html'," for c in CFG['characters']))
-    shell.append("  './style.css', './manifest.json',")
+    shell.append("  './style.css', './app.js', './manifest.json',")
     shell.append("  './icon-192.png', './icon-180.png', './favicon-32.png'")
     splice('sw.js', 'shell', '\n'.join(shell))
 
