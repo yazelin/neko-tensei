@@ -68,9 +68,9 @@ service worker 的 scope 與各自的慣例都要求如此。
 1. 照 [`story/README.md`](story/README.md) 寫分鏡（對白逐字寫進 prompt）、生圖、逐頁驗字，成品進 `images/epN/`
 2. `episodes.json` 加一段（頁次與 alt 都寫在這裡）
 3. `python3 build.py`
-4. bump `sw.js` 的 `SHELL` / `ASSET` 版本號，commit push
+4. commit push
 
-`build.py` 會同步首頁列表、上一話／下一話、sitemap 與離線快取清單，這幾個地方都不用手改。
+`build.py` 會同步首頁列表、上一話／下一話、sitemap、離線快取清單與 `sw.js` 的兩個快取版號，這幾個地方都不用手改。版號是清單內容的 hash，改殼檔或換圖才會變，不必也不要手動 bump。
 
 ## 授權
 

@@ -93,14 +93,18 @@ python3 build.py
 
 `index.html` 的話數列表、`sitemap.xml`、`sw.js` 的快取清單也都是它產的（在標記註解之間）。
 
-### `sw.js` 的 `ASSET` 只有換圖才能 bump
+### `sw.js` 的快取版號是算出來的，不要手改
 
 ```js
-const SHELL = 'nt-shell-vN';   // 每次部署都 bump
-const ASSET = 'nt-asset-vN';   // 只有同名檔換內容才 bump
+/* ver:start */                         // build.py 產,別手改
+const SHELL = 'nt-shell-v20-1d25ba92';  // 殼檔清單的內容 hash
+const ASSET = 'nt-asset-v20-c32beb0e';  // 圖檔清單的內容 hash
+/* ver:end */
 ```
 
-跟著 `SHELL` 一起 bump 會讓 `activate` 刪掉舊 asset 快取，`warm()` 再用 `cache:'reload'` 整包重抓約 **10.6 MB**。讀者在捷運上開站會白吃這些流量。
+為什麼要算不要記：`ASSET` 一變，`activate` 會刪掉舊 asset 快取，`warm()` 再用 `cache:'reload'` 整包重抓約 **10.6 MB**，讀者在捷運上開站會白吃這些流量。圖沒動 hash 就不會變，這種事再也不會誤觸；反過來忘了 bump 讓讀者拿到舊快取也不會。
+
+`sw.js` 不能把自己算進 hash（會自我參照）。**改了 sw.js 的快取策略、或知道舊快取裡已經有髒資料**，把 `build.py` 的 `EPOCH` +1 強制所有人重來。
 
 ### localStorage 的 key 一律 `nt-` 前綴
 

@@ -7,7 +7,7 @@
   3. python3 build.py
 角色頁(char-*.html)與首頁的文案是手寫的,本腳本只碰標記之間的區塊。
 """
-import html, json, pathlib, re, sys
+import hashlib, html, json, pathlib, re, sys
 
 ROOT = pathlib.Path(__file__).parent
 CFG = json.loads((ROOT / 'episodes.json').read_text('utf-8'))
@@ -69,6 +69,26 @@ HEAD = """<!doctype html><html lang="zh-Hant-TW"><head><meta charset="utf-8">
 <main class="reader">
   <h1 style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">{h1}</h1>
 """
+
+# 快取版號的逃生口。平常不要動——版號由檔案內容算出來,改殼檔或換圖會自己變。
+# 只有 hash 看不到的情況才 +1:改了 sw.js 自己的快取策略、或舊快取裡已經有髒
+# 資料要強制所有讀者重來。sw.js 不能把自己算進 hash(會自我參照)。
+EPOCH = 'v20'
+
+
+def digest(paths):
+    """一組檔案的內容指紋。路徑也算進去,所以清單增刪同樣會讓版號變。
+
+    只涵蓋 SHELL_FILES 與 WARM 這兩份清單裡的檔案。**別把大檔放進 SHELL_FILES**
+    ——殼是「任何一個 byte 變動就整包換名重抓」的那一層,現在只有幾百 KB,
+    塞進一張圖就會變成「改一行 CSS,讀者重抓好幾 MB」。
+    """
+    h = hashlib.sha256()
+    for p in sorted(paths):
+        h.update(p.encode())
+        h.update(hashlib.sha256((ROOT / p).read_bytes()).digest())
+    return h.hexdigest()[:8]
+
 
 CN = '一二三四五六七八九十'
 
@@ -180,6 +200,17 @@ def main():
         cur += item
     lines.append(cur.rstrip().rstrip(','))
     splice('sw.js', 'warm', '\n'.join(lines))
+
+    # 版號 = 清單內容的 hash。人不用記得 bump,也不可能誤 bump:圖沒換
+    # ASSET 就不會變,殼沒動 SHELL 就不會變。兩份清單各自算各自的。
+    shell_files = (['index.html']
+                   + [f'ep/{e["n"]}.html' for e in EPS]
+                   + [f'char/{c["slug"]}.html' for c in CFG['characters']]
+                   + ['style.css', 'app.js', 'manifest.json',
+                      'assets/icon-192.png', 'assets/icon-180.png', 'assets/favicon-32.png'])
+    splice('sw.js', 'ver',
+           f"const SHELL = 'nt-shell-{EPOCH}-{digest(shell_files)}';\n"
+           f"const ASSET = 'nt-asset-{EPOCH}-{digest(w[2:] for w in warm)}';")
 
     print(f'built {len(EPS)} episodes, {len(CFG["characters"])} characters')
 

@@ -61,7 +61,7 @@ python3 -m unittest discover -s scripts -p 'test_*.py' -v
 
 ## 行動版留下的技術債
 
-- [ ] `sw.js` 的 `ASSET` 版號規則可以在 git 層自動化：`images/` 無異動時 `ASSET` 必須與 base 相同，有異動才准 bump。這次差點讓回訪讀者白抓 10.6 MB——`activate` 會刪掉舊 asset 快取，`warm()` 再用 `cache:'reload'` 整包重抓
+- [x] `sw.js` 的版號已經改成內容 hash（`build.py` 的 `digest()`）：圖沒動 `ASSET` 就不會變，殼沒動 `SHELL` 就不會變，兩種誤觸都不可能再發生。`scripts/check-sw-version.sh` 因此退休刪除，pipeline `publish()` 裡那段正則 +1 也刪了
 - [ ] `app.js` 的 `deferred.userChoice` 沒有 `.catch()`，reject 時第四格標籤會卡在「安裝」
 - [ ] `scripts/verify-mobile.js` 的 `freePort()` 有 TOCTOU 窗口（listen(0) → close → spawn 之間 port 可能被搶）。失敗會大聲報錯不會靜默驗錯站，可接受
 - [ ] `app.js` 從 hash 跳轉時掛的 `load` 監聽器實務上是 dead code——`<img>` 有 `width`/`height`，瀏覽器會先用 aspect-ratio 保留高度。留著無害，但別誤以為它被驗過

@@ -844,18 +844,8 @@ def publish(plan, n, has_cover):
     cfg['episodes'].append(episode_entry(plan, n, date, has_cover))
     cfg_path.write_text(json.dumps(cfg, ensure_ascii=False, indent=2) + '\n', 'utf-8')
 
-    # sw.js:殼要 bump(多了一頁 epN.html);ASSET 只有換圖才 bump,
-    # 但這次確實多了新圖,所以兩個都要動。
-    sw = ROOT / 'sw.js'
-    t = sw.read_text('utf-8')
-    for kind in ('shell', 'asset'):
-        m = re.search(rf"nt-{kind}-v(\d+)", t)
-        if not m:
-            raise RuntimeError(f'sw.js 找不到 nt-{kind}-v<數字>,版號沒 bump 就落檔會讓'
-                               f'讀者拿到舊快取,這裡直接停下來')
-        t = t.replace(m.group(0), f"nt-{kind}-v{int(m.group(1)) + 1}")
-    sw.write_text(t, 'utf-8')
-
+    # sw.js 的兩個版號不用在這裡動:build.py 會從殼檔與圖檔的內容重算,
+    # 多了一頁 epN.html、多了七張圖,兩個 hash 自然都會變。
     subprocess.run(['python3', str(ROOT / 'build.py')], check=True, cwd=ROOT)
 
 
