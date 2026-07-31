@@ -25,8 +25,10 @@ class TestCanon(unittest.TestCase):
 
     def test_帶進最近兩話的分鏡(self):
         c = ne.load_canon()
-        self.assertIn('魔力不足', c['recent'])
-        self.assertIn('得加 Token', c['recent'])
+        # 兩話各斷言一個只出現在自己檔案裡的字串。不要兩個都選 ep2 的——
+        # 那樣把 eps[-2:] 改成 eps[-1:] 測試照樣會過,測不到「兩話」。
+        self.assertIn('史萊姆登場過場頁', c['recent'])   # 只在 ep1.md
+        self.assertIn('魔力不足', c['recent'])           # 只在 ep2.md
 
     def test_話數不重複(self):
         c = ne.load_canon()

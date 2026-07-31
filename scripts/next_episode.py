@@ -19,13 +19,18 @@ def load_canon():
     """讀出 LLM 寫企劃需要知道的一切。"""
     cfg = json.loads((ROOT / 'episodes.json').read_text('utf-8'))
     eps = cfg['episodes']
+    ordered = sorted(eps, key=lambda e: e['n'])
     rules = (ROOT / 'story' / 'README.md').read_text('utf-8')
     recent = "\n\n".join(
         (ROOT / 'story' / f"ep{e['n']}.md").read_text('utf-8')
-        for e in eps[-2:]
+        for e in ordered[-2:]
         if (ROOT / 'story' / f"ep{e['n']}.md").is_file())
+    if not recent.strip():
+        raise RuntimeError(
+            '讀不到任何一話的分鏡(story/epN.md),LLM 會完全沒有前情提要。'
+            '這條 pipeline 的價值就在連續性,寧可停下來也不要產一話接不上的東西。')
     return {
-        'next_n': eps[-1]['n'] + 1,
+        'next_n': ordered[-1]['n'] + 1,
         'episodes': eps,
         'rules': rules,
         'recent': recent,
