@@ -32,11 +32,29 @@ class TestCanon(unittest.TestCase):
         self.assertIn('必勝', c['rules'])
 
     def test_帶進最近兩話的分鏡(self):
+        """最後兩話都要在,再往前一話不可以在。
+
+        原本這裡寫死「ep1 的字串 + ep2 的字串」,第三話一落地就紅了——它驗的
+        其實是「現在剛好只有兩話」,不是「取最後兩話」。改成從 episodes.json
+        推導:兩話各斷言一次(只斷言最後一話的話,把 [-2:] 改成 [-1:] 照樣會過,
+        就測不到「兩話」),再斷言更早那話不在,才鎖得住上界。
+
+        指標用各話分鏡檔自己的 H1 整行(含開頭的 `# `),不是標題字串——標題會被
+        別話引用(ep2.md 講字幕替換時就整句引了第一話的標題),拿標題當指標會讓
+        「不在」那條斷言假失敗。H1 只會出現在自己的檔案裡。
+        """
         c = ne.load_canon()
-        # 兩話各斷言一個只出現在自己檔案裡的字串。不要兩個都選 ep2 的——
-        # 那樣把 eps[-2:] 改成 eps[-1:] 測試照樣會過,測不到「兩話」。
-        self.assertIn('史萊姆登場過場頁', c['recent'])   # 只在 ep1.md
-        self.assertIn('魔力不足', c['recent'])           # 只在 ep2.md
+        ns = sorted(e['n'] for e in c['episodes'])
+        story = pathlib.Path(__file__).parent.parent / 'story'
+
+        def h1(n):
+            return (story / f'ep{n}.md').read_text('utf-8').splitlines()[0]
+
+        for n in ns[-2:]:
+            self.assertIn(h1(n), c['recent'], f'最後兩話之一沒帶進來:第 {n} 話')
+        if len(ns) > 2:
+            self.assertNotIn(h1(ns[-3]), c['recent'],
+                             f'帶進了第三舊的一話,取的不是「最近兩話」:第 {ns[-3]} 話')
 
     def test_話數不重複(self):
         c = ne.load_canon()
