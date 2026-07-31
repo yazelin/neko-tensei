@@ -733,6 +733,7 @@ def pr_body(plan, n, wishes, wish_err=None, branch=None):
 
 
 WEBP_QUALITY = 95
+PAGE_W = 1024        # 站上每一頁的寬度,ep/*.html 的 <img> 寫死這個數字
 
 
 def save_image(raw, out):
@@ -751,7 +752,13 @@ def save_image(raw, out):
         return
     import io
     from PIL import Image
-    Image.open(io.BytesIO(raw)).convert('RGB').save(out, 'WEBP', quality=WEBP_QUALITY)
+    im = Image.open(io.BytesIO(raw)).convert('RGB')
+    # 站上的 <img> 寫死 width=1024 height=1536,比這更大的圖只是讓 PWA 的
+    # precache 變重。Gemini 那條要 2K(1696×2528)是為了對白銳利,縮回來
+    # 才落檔;codex 那條本來就是 1024,這裡是 no-op。
+    if im.width > PAGE_W:
+        im = im.resize((PAGE_W, round(im.height * PAGE_W / im.width)), Image.LANCZOS)
+    im.save(out, 'WEBP', quality=WEBP_QUALITY)
 
 
 def generate_image(name, keys, body, out):
@@ -781,7 +788,14 @@ def _img_gemini(name, keys, body, out):
             'data': base64.b64encode(p.read_bytes()).decode()}})
     url = (f'{GEMINI_IMAGE_BASE}/v1beta/models/{GEMINI_IMAGE_MODEL}'
            f':generateContent?key={key}')
-    req = urllib.request.Request(url, json.dumps({'contents': [{'parts': parts}]}).encode(),
+    # imageConfig 一定要給。實測(2026-08-01,gemini-3.1-flash-image-preview):
+    # 什麼都不給 → 回 1408×768 的橫幅,一頁三格的直式分鏡直接毀掉;
+    # aspectRatio=2:3 → 848×1264;再加 imageSize=2K → 1696×2528。
+    # prompt 裡雖然寫了 portrait 2:3,但那只是「有時候會聽」,不能當設定用。
+    # 要 2K 是為了對白清楚:落檔時再縮到站上的 1024 寬,縮圖比直接生小圖銳利。
+    body = {'contents': [{'parts': parts}],
+            'generationConfig': {'imageConfig': {'aspectRatio': '2:3', 'imageSize': '2K'}}}
+    req = urllib.request.Request(url, json.dumps(body).encode(),
                                  {'Content-Type': 'application/json', 'User-Agent': UA})
     t0 = time.time()
     with urllib.request.urlopen(req, timeout=600) as f:
