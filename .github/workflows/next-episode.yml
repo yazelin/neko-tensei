@@ -46,6 +46,24 @@ jobs:
           [ -z "$CODEX_IMAGE_KEY" ] && { echo "::error::缺 CODEX_IMAGE_KEY"; miss=1; }
           exit $miss
 
+      - name: 算出這次是第幾話
+        id: ep
+        run: |
+          N=$(python3 -c "import json;print(max(e['n'] for e in json.load(open('episodes.json'))['episodes']) + 1)")
+          echo "n=$N" >> "$GITHUB_OUTPUT"
+          echo "這次要產第 $N 話"
+
+      # runner 用完即丟,沒有 cache 的話「跑到一半掛掉」永遠只能整話重來。
+      # 快取的是這一話已經出好的圖,加上那一份企劃——兩者是同一份狀態,
+      # 只留圖不留企劃的話,下次重跑會出一份新劇本配到舊圖。
+      - name: 取回上次沒跑完的進度
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            images/ep${{ steps.ep.outputs.n }}
+            .pipeline-cache
+          key: ep-progress-${{ steps.ep.outputs.n }}
+
       - name: 產出下一話
         id: gen
         env:
@@ -74,6 +92,17 @@ jobs:
             --title "第 $N 話草稿——待你看過再 merge" \
             --body-file ".pr-body-ep$N.md" \
             --label auto-episode
+
+      # 只在失敗時存。成功的話 publish 已經把圖 commit 進 PR 了,再留一份
+      # 快取只會讓下一話誤撿到上一話的殘骸。
+      - name: 存下沒跑完的進度
+        if: failure()
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            images/ep${{ steps.ep.outputs.n }}
+            .pipeline-cache
+          key: ep-progress-${{ steps.ep.outputs.n }}
 
       - name: 失敗就開 issue
         if: failure()

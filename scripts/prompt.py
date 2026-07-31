@@ -22,7 +22,8 @@ _BASE = (CAST_PATH.parent / _CAST.get('root', '.')).resolve()
 # 之後接這一格要鎖的道具/場景,再接出場角色的設定圖。光靠文字描述會漂——
 # 寫「圓形金牌」模型會畫成肉球牌,所以設定圖一定要傳。
 REF = {'style': (_CAST['style_ref']['path'], _CAST['style_ref']['desc']),
-       'cover_style': (_CAST['cover_ref']['path'], _CAST['cover_ref']['desc'])}
+       'cover_style': (_CAST['cover_ref']['path'], _CAST['cover_ref']['desc']),
+       'balloons': (_CAST['balloon_ref']['path'], _CAST['balloon_ref']['desc'])}
 for _k, _v in list(_CAST['cast'].items()) + list(_CAST.get('world', {}).items()):
     REF[_k] = (_v['ref'], _v['desc'])
 
@@ -48,6 +49,7 @@ FORMER HUMAN SELVES - only used inside memory bubbles. Copy them from the model 
 THE PAST IS ALWAYS BLACK AND WHITE: render every memory bubble in greyscale with a faint neon-blue glow, exactly like the model sheet. The cat world stays in full colour. This contrast is the whole point."""
 
 SHAPES_BLOCK = """BALLOON SHAPES - each line below names its own balloon shape. Draw that exact shape; do NOT default every balloon to a rounded rectangle. Hand-inked manga feel, slightly irregular outlines, never a perfect geometric shape.
+One of the reference images is a chart of these seven shapes drawn EMPTY on white - copy the silhouettes from that chart, it is the authority for what each shape looks like. Do NOT draw the chart itself into the page, and do NOT copy its empty balloons as extra balloons; use it only as the shape reference for the balloons listed below.
 - SHOUT BALLOON: spiky explosion burst with sharp jagged points all around, thick black outline, large bold text.
 - OVAL BALLOON: soft hand-drawn organic oval, thin black outline, with a short curved tail pointing at the speaker.
 - WEAK BALLOON: small squashed oval with a thin wobbly or dashed outline, small text, deflated feeling.
