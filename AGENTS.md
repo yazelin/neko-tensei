@@ -158,6 +158,8 @@ python3 -B -m unittest discover -s scripts -p 'test_*.py'
 
 | 檔案 | 內容 |
 |---|---|
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | 協作手冊：投一張圖／畫一整話／加新角色，三條路的完整步驟 |
+| [`story/cast.json`](story/cast.json) | 角色設定的機器可讀版本，給 [cast-lock](https://github.com/yazelin/cast-lock-skill) 用 |
 | [`story/README.md`](story/README.md) | 創作規範正本：分工、鐵律、角色特徵、框型表 |
 | `story/epN.md` | 每一話的逐頁分鏡與生圖 prompt |
 | [`NEXT.md`](NEXT.md) | 下一步與技術債 |
