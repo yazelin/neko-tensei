@@ -145,6 +145,43 @@
           "alt": "The four cats step inside the towering dark lobby; high up on a floating platform, a mysterious cat silhouette surrounded by dark cyan screens looks down at them.：小白++「請問……這裡的機房管理員"
         }
       ]
+    },
+    {
+      "n": 4,
+      "title": "Legacy Code 的遺跡！",
+      "date": "2026-07-31",
+      "desc": "四貓深入黑塔機房，發現塔內的系統全是舊同事留下的 Legacy Code，甚至觸發了無法關閉的緊急廣播系統！",
+      "credit": "劇情與作畫：Claude × gpt-image-2",
+      "pages": [
+        {
+          "f": "00-cover.webp",
+          "alt": "第四話封面：Legacy Code 的遺跡！"
+        },
+        {
+          "f": "01.webp",
+          "alt": "The four cats walk through a futuristic dark passage inside the tower. Holographic cyan logs scroll rapidly on vertical floating screens lining the stone walls.：小白++「這裡的感覺……好熟悉，像公司"
+        },
+        {
+          "f": "02.webp",
+          "alt": "SWORDSMAN CAT slams his cat hand straight down onto the giant red button. High-voltage red emergency lights immediately flash across the whole corridor.：小白++「卡嗒！我按了！」、里歐「你手速也太快了吧？！"
+        },
+        {
+          "f": "03.webp",
+          "alt": "The passage dead-ends at a huge heavy iron security gate sealed with three glowing red energy bolts. A terminal screen displays 'Access Denied: Root Required'.：中年攻城屍「沒路了。看來只能用鋼刀破門。"
+        },
+        {
+          "f": "04.webp",
+          "alt": "The terminal screen flashes violently red with huge text '2FA Verification Required. Send SMS code to Master'. All four cats stagger back.：小白++「要雙重驗證？！簡訊發給小次郎了！」、里歐「這下完蛋，老闆知道我們在偷闖機"
+        },
+        {
+          "f": "05.webp",
+          "alt": "SWORDSMAN CAT enters the 6-digit code on the key panel using his front paw. The three red energy bolts turn green with a loud mechanical unlock sound.：小白++「成功通關！門開啦——！」、中年攻城屍「不費吹灰之"
+        },
+        {
+          "f": "06.webp",
+          "alt": "Close-up on the central holographic column displaying a golden user profile picture of a cute fluffy cat avatar titled 'System Owner: Arasaka Kojiro'.：小鳥不啾「『系統擁有者：荒坂小次郎』。」、里歐「這整座塔…"
+        }
+      ]
     }
   ]
 }
