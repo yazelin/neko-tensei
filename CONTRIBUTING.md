@@ -31,12 +31,31 @@
 
 ### 裝技能
 
+**最簡單的方式：不用裝。** 這兩支腳本是純 Python 3 標準函式庫，clone 下來直接跑就好：
+
 ```bash
 git clone https://github.com/yazelin/cast-lock-skill ~/cast-lock-skill
-ln -s ~/cast-lock-skill ~/.claude/skills/cast-lock
+python3 ~/cast-lock-skill/build.py --help
 ```
 
-Windows 用 `python` 不是 `python3`，symlink 需要管理員權限，直接 clone 到 `%USERPROFILE%\.claude\skills\cast-lock` 比較省事。
+（Windows 用 `python` 不是 `python3`——`python3` 會觸發 Microsoft Store 轉址。）
+
+只有在你想讓 AI agent **自動認得**這個技能時才需要下面這步：
+
+```bash
+# Claude Code
+mkdir -p ~/.claude/skills
+ln -s ~/cast-lock-skill ~/.claude/skills/cast-lock
+
+# Codex / 其他 agent:直接叫它讀 ~/cast-lock-skill/SKILL.md 照著做即可,
+# 技能本體是 SKILL.md 加兩支腳本,不綁任何特定工具
+```
+
+Windows 的 symlink 需要管理員或開發人員模式，比較省事的做法是直接 clone 到技能目錄底下：
+
+```powershell
+git clone https://github.com/yazelin/cast-lock-skill "$env:USERPROFILE\.claude\skills\cast-lock"
+```
 
 ---
 
