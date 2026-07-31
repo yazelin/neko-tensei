@@ -11,12 +11,12 @@
 ## Global Constraints
 
 - 設計來源：`docs/superpowers/specs/2026-07-31-auto-episode-pipeline-design.md`
-- **不新增 pip 相依。** 只用 Python 3.12 標準函式庫。`gh` CLI 已安裝可用
+- **只允許一個 pip 相依：`opencc-python-reimplemented`**（簡繁檢查用）。其餘一律 Python 3.12 標準函式庫。`gh` CLI 已安裝可用
 - **不自動 merge。** PR 開著等人看
 - **這一輪不啟用 cron。** workflow 只留 `workflow_dispatch`，`schedule` 區塊註解掉並附說明。等人工跑過一次、確認 PR 長相之後才由 yazelin 打開
 - **這一輪不真的產出第三話上線。** 本機測試只准打 codex-image-service 一次（驗證接線），不准整話跑完
 - 一話 = 封面 1 張 ＋ 內頁 6 張。若 `episodes.json` 該話已填社群投稿封面檔名就跳過封面
-- 對白一律正體中文；用 `opencc-python-reimplemented` 驗簡繁**這條作廢**——不新增相依，改用下方 Task 4 指定的簡體字表比對
+- 對白一律正體中文，用 `opencc-python-reimplemented` 的 `s2t` 往返比對
 - 出圖上限 7 張、重試上限 3 次
 - 同時只允許一個開著的 `auto-episode` PR
 - 失敗開 issue 標 `auto-episode`，不留半成品 PR
@@ -24,9 +24,13 @@
 - `ep*.html` 由 `build.py` 產生，永不手改
 - **金鑰只從環境變數讀，永遠不進 repo。** 本機測試用的金鑰在 `/home/ct/novel-token-unlimited/漫畫/keys.json`（repo 外），CI 用 GitHub secrets
 
-### 與 spec 的一處偏離（已知，故意的）
+### 一個曾經想省掉、但證明省不得的相依
 
-spec 寫「用 `opencc-python-reimplemented` 的 `s2t` 轉一次比對」。實作改成內建簡體字表比對，理由是**不新增 pip 相依**這條約束更重要——CI 每次跑都要裝一個套件，只為了驗幾十個字。字表法的邊界情況較弱，所以 Task 4 用「只收錄本作實際會用到的常見簡體字」＋「測試涵蓋每一個表內字」來補。
+寫這份計劃時我為了「不新增 pip 相依」，把 spec 指定的 OpenCC 換成手打的簡體字表。派工前實測，那份 231 字的表裡混進了**正體字**：`那`、`只`、`巨`、`唯`、`反`、`埋`、`准`。其中「那」幾乎每句話都有——驗證器上線後會把絕大多數合法企劃當成含簡體字擋掉。
+
+手打字表的根本問題是沒有正確性保證：我是憑記憶打的，已經證明記憶不可靠，再挑掉幾個字剩下的一樣沒保證。OpenCC 在同一組測試上七個案例全對（含「那」「只」「隻」都正確判為正體）。
+
+所以回到 spec 的原案。這是整份計劃唯一的 pip 相依，套件約 470 KB。
 
 ---
 
@@ -495,7 +499,6 @@ LLM 出的企劃在花掉出圖額度之前，要先被一組不會妥協的規�
 **Interfaces:**
 - Consumes: Task 1 的 `prompt.SHAPES`
 - Produces:
-  - `SIMPLIFIED: str` — 簡體字表
   - `has_simplified(text: str) -> str | None` — 回第一個踩到的簡體字，沒有就回 `None`
   - `validate_plan(plan: dict, next_n: int, titles: list[str]) -> list[str]` — 回問題清單，空清單代表通過
 
@@ -536,9 +539,26 @@ class TestSimplified(unittest.TestCase):
         self.assertIsNone(ne.has_simplified('這個世界的魔力，是我在配的。'))
         self.assertIsNone(ne.has_simplified('得加 Token！'))
 
-    def test_字表裡每一個字都真的會被抓到(self):
-        for ch in ne.SIMPLIFIED:
-            self.assertEqual(ne.has_simplified(f'測試{ch}字'), ch, ch)
+    def test_容易被誤判的正體字要放行(self):
+        # 這幾個字在手打字表的版本裡被誤收成簡體,「那」幾乎每句話都有,
+        # 誤判會讓驗證器擋掉絕大多數合法企劃。
+        for s in ['那座塔上的光……不是紅色的。', '隱形只隱一半。這比沒隱還慘。',
+                  '四隻空瓶子，還敢慶祝。', '巨大的暗棕色長毛貓',
+                  '唯一的線索', '反而露出笑', '埋下伏筆', '準備好了']:
+            self.assertIsNone(ne.has_simplified(s), s)
+
+    def test_既有兩話的對白全部放行(self):
+        # 最有價值的一條:拿真實內容當回歸測試。手打字表就是敗在這裡——
+        # 誤收正體字之後,連自己已經上線的對白都會被判成簡體。
+        import pathlib as _p
+        root = _p.Path(__file__).parent.parent
+        for f in sorted((root / 'story').glob('ep*.md')):
+            bad = ne.has_simplified(f.read_text('utf-8'))
+            self.assertIsNone(bad, f'{f.name} 出現「{bad}」')
+
+    def test_空字串與None不炸(self):
+        self.assertIsNone(ne.has_simplified(''))
+        self.assertIsNone(ne.has_simplified(None))
 
 
 class TestValidate(unittest.TestCase):
@@ -618,29 +638,38 @@ Expected：`AttributeError: module 'next_episode' has no attribute 'has_simplifi
 在 `scripts/next_episode.py` 頂端加 `import prompt`（放在 `import pathlib` 之後、`ROOT` 之前，並先 `import sys; sys.path.insert(0, str(pathlib.Path(__file__).parent))`），然後在 `fetch_wishes` 之後加：
 
 ```python
-# 常見簡體字表。spec 原本寫用 opencc,但那要多裝一個 pip 套件,而這個 repo
-# 刻意維持純 stdlib。收錄範圍是「本作對白實際會用到的字」,不是完整字表——
-# 測試會逐字驗證表內每個字都真的抓得到。發現漏網的就往這裡加。
-SIMPLIFIED = (
-    '这那们个来对说话时后书长东车马鸟贝见门问闻间开关闭无为达过还进远连'
-    '边转轮软轻较辆输巨点热爱乐会体学习实宝导张弹强当录归录岁虽双发变现'
-    '战戏动务胜势单卖买乱争亏产亲从众仓价众优传伤众个么亿仪们价众伟'
-    '够头夹夺奋妆学宁写军农冲决况净准凉减凑击刘则刚创删别刹刽剑剧劝办'
-    '务动励劳势勋医华协单卫却厂厅历厉压厌厕参双反发变叙叠只叶号叹后'
-    '吓吗吨听启员呐呒响哑哟唤唠唯啰喷嗒嘱团园困围国图圆圣场坏块坚坛'
-    '坟垒垫埋壮声壳处备复够头奖妇妈姗娄娘婴嫒宽宾实宠审写宪宫寻导对'
-    '寿将尔尘尝尧尴层屉届属岖岗岚岛峡崂巅币帅师帐帘帜带帮幂并广庆库'
-)
-
 CHARS = {'xiaoniao', 'xiaobai', 'uncle', 'leo', 'kojiro'}
+
+_CC = None
+
+
+def _cc():
+    """OpenCC 轉換器。初始化要讀字典檔,只做一次。"""
+    global _CC
+    if _CC is None:
+        from opencc import OpenCC
+        _CC = OpenCC('s2t')
+    return _CC
 
 
 def has_simplified(text):
-    """回第一個踩到的簡體字;都是正體就回 None。"""
-    for ch in text or '':
-        if ch in SIMPLIFIED:
-            return ch
-    return None
+    """回第一個簡體字;都是正體就回 None。
+
+    用 OpenCC 的 s2t 轉一次再比對,**不要手維護字表**。這份計劃原本為了省掉
+    相依而手打了一份 231 字的表,派工前實測發現裡面混進正體字——那、只、
+    巨、唯、反、埋、准。「那」幾乎每句話都有,那份表會把絕大多數合法企劃
+    當成含簡體字擋掉,而且錯得很安靜。
+    """
+    if not text:
+        return None
+    conv = _cc().convert(text)
+    if conv == text:
+        return None
+    for a, b in zip(text, conv):
+        if a != b:
+            return a
+    # s2t 偶爾會讓長度改變(一對多),前面比不出來就退回第一個超出的字
+    return (text[len(conv):] or text)[:1] or None
 
 
 def _lines(plan):
@@ -714,7 +743,7 @@ def validate_plan(plan, next_n, titles):
 cd ~/neko-tensei && python3 -m unittest discover -s scripts -p 'test_*.py' 2>&1 | tail -3
 ```
 
-Expected：`OK`，29 個測試通過。若 `test_字表裡每一個字都真的會被抓到` 失敗，代表 `SIMPLIFIED` 裡有重複字元造成的順序問題——把重複的挑掉。
+Expected：`OK`（測試數比前一個任務多 13 條）。若 `test_既有兩話的對白全部放行` 失敗，代表簡繁判斷誤殺了合法正體字——那是 Critical，先查清楚再往下，不要放寬測試。
 
 - [ ] **Step 5: Commit**
 
@@ -1734,6 +1763,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: 裝相依（整條線唯一的 pip 套件）
+        run: pip install --quiet opencc-python-reimplemented
+
       - name: 確認沒有還開著的草稿 PR
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -1835,6 +1867,12 @@ Expected：建立成功，或 `already exists`（都可以）。
 3. 滿意之後把 workflow 裡 `schedule:` 那三行的註解拿掉，cron 才會開始跑
 
 **本機怎麼試：**
+
+先裝唯一的相依（Ubuntu 24.04 需要 `--break-system-packages`）：
+
+```bash
+pip install --user --break-system-packages opencc-python-reimplemented
+```
 
 ```bash
 # 金鑰只從環境變數讀,不要寫進任何檔案
