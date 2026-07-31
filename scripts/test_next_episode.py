@@ -216,6 +216,41 @@ class TestSimplified(unittest.TestCase):
                   '誕生於 LINE C# 社群閒聊的連載漫畫']:
             self.assertIsNone(ne.has_simplified(s), s)
 
+    def test_TW_EXTRA表裡的字全部放行(self):
+        # 逐字鎖住 TW_EXTRA 放行表——目前只有「霉」,查證來源是教育部
+        # 《重編國語辭典修訂本》(見 TW_EXTRA 的註解)。連常見詞一起測,不是
+        # 只測單字,因為驗證器實際收到的是整句對白。
+        for ch in ne.TW_EXTRA:
+            self.assertIsNone(ne.has_simplified(ch), ch)
+        for s in ['發霉', '倒霉', '霉味', '地下室有一股霉味,誰都不敢進去。']:
+            self.assertIsNone(ne.has_simplified(s), s)
+
+    def test_TW_EXTRA不能收真正的簡體字(self):
+        # 反向測試:防止 TW_EXTRA 被濫用成第二份手打字表。
+        #
+        # coordinator 原本要求的做法是「斷言表裡的字不在 STCharacters.txt
+        # 的簡體來源欄位裡」——實測發現這條做不到:STCharacters.txt 的簡體
+        # 來源欄位(左欄)就是 _simplified_map() 的 key,而 TW_EXTRA 裡的字
+        # 「之所以」需要被收進放行表,正是因為它們本來就在那個左欄(例如
+        # 「霉」對應到候選「黴」)。這條檢查對任何一個真的需要放進 TW_EXTRA
+        # 的字,結構上必定失敗,不是我漏做,是這個檢查跟「為什麼需要
+        # TW_EXTRA」互相矛盾——細節與 mutation 證據見 task-4-report.md。
+        #
+        # 改成兩個真的可以自動驗證、對防濫用有意義的檢查:
+        # 1. 候選數必須剛好 1 個。像「发」的候選是【發、髮】兩個完全不同的
+        #    繁體字,是「多個繁體字被簡化合併成一個字」的真簡化特徵,結構上
+        #    不可能是單純的異體字分工(異體字分工是一對一,如「峰/峯」)。
+        #    候選數 >= 2 的字直接排除,防止之後有人手滑把這種字塞進來。
+        for ch in ne.TW_EXTRA:
+            cands = ne._simplified_map().get(ch, [])
+            self.assertEqual(len(cands), 1,
+                              f'{ch} 候選數不是 1,像多對一合併的真簡化字,不該進 TW_EXTRA:{cands}')
+        # 2. 跟既有回歸測試裡「確定必須繼續被擋」的核心簡體字互斥——這些字
+        #    沒有任何 TW/異體字佐證,是 test_抓到簡體字 鎖住的基準。
+        core_simplified = {'这', '来', '发', '头', '爱', '门', '为'}
+        self.assertEqual(ne.TW_EXTRA.keys() & core_simplified, set(),
+                          'TW_EXTRA 收到了確定是簡體字的字')
+
     def test_既有正體中文資產全部放行(self):
         # 最有價值的一條:拿真實內容當回歸測試,範圍涵蓋整個 repo 的正體
         # 中文資產,不是只掃兩話分鏡——上一輪只掃 story/ep*.md,漏掉了

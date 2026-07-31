@@ -142,6 +142,26 @@ def _tw_variants():
     return _TW_STANDARD
 
 
+TW_EXTRA = {
+    # 放行表,不是封鎖表——這條紅線是「不要手維護『什麼算簡體』的表」,
+    # 因為封鎖表寫錯一個字會大規模誤殺(「那」幾乎每句話都有,差點讓驗證器
+    # 變成全擋合法企劃)。這份表方向相反:漏收一個字,代價只是漏掉一個
+    # 簡體字沒被擋下來,而 PR 是人工審查才會合併的,人看得見。失效方向不
+    # 對稱,所以可以承受比較低的舉證門檻,但還是要收得謹慎:
+    #   1. 只收「OpenCC 隨附字典檔(STCharacters/TWVariants/TWPhrases/
+    #      HKVariants 等)都救不到」的字——能靠 _tw_variants() 放行的不要
+    #      往這裡加,加了也是重複。
+    #   2. 每一筆都要附外部權威來源(字典網址),不能只憑印象。
+    #   3. 新增前務必用 test_台灣標準異體字要放行 之類的回歸測試逐字鎖住,
+    #      並用 test_TW_EXTRA不能收真正的簡體字 這條反向測試過一次。
+    '霉': ('教育部《重編國語辭典修訂本》收「霉」「霉頭」「發霉」「倒霉」為'
+           '正式詞條,是台灣教育部承認的用字,只有「黴菌」固定用「黴」。'
+           'STCharacters.txt 只收「霉→黴」,TWVariants.txt 沒有這對資料,'
+           '兩邊都救不到才進這裡。'
+           'https://dict.revised.moe.edu.tw/dictView.jsp?ID=1124'),
+}
+
+
 def has_simplified(text):
     """回第一個簡體字;都是正體就回 None。
 
@@ -166,6 +186,11 @@ def has_simplified(text):
     TWVariants.txt:候選字裡如果有誰的台灣標準寫法就是 ch 自己,代表 ch
     本身就是台灣慣用字,放行。
 
+    TWVariants.txt 不是萬能的:「霉」(教育部辭典承認的台灣用字,只有
+    「黴菌」固定用「黴」)這對資料兩邊字典檔都沒收,確認過所有 OpenCC
+    隨附字典檔都救不到之後,才另外開了 TW_EXTRA 這份小的放行表——每一筆
+    都要附權威來源,細節見 TW_EXTRA 的註解。
+
     已知假陰性(接受的 trade-off,不是 bug):字元級判斷完全不看上下文,
     只要一個字的候選清單裡包含它自己(代表它有合法的正體用法),就永遠
     放行那個字——即使整句話其實是簡體。例如「里」的候選含「里」本身
@@ -184,6 +209,8 @@ def has_simplified(text):
         if not cands or ch in cands:
             continue
         if any(tw.get(c) == ch for c in cands):
+            continue
+        if ch in TW_EXTRA:
             continue
         return ch
     return None
