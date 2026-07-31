@@ -162,5 +162,133 @@ class TestWishes(unittest.TestCase):
         self.assertIsNotNone(err)
 
 
+def _good_plan(n=3):
+    """一份會通過驗證的最小企劃,測試用它當基準再逐項弄壞。"""
+    shapes = ['SHOUT', 'OVAL', 'WEAK', 'TREMBLE', 'THOUGHT', 'DEMON']
+    return {
+        'title': '黑塔上的另一個人',
+        'desc': '四貓帶著通行證走向黑塔,塔上的魔法陣不是小次郎點的。',
+        'beats': ['出發', '塔前受阻', '看見塔頂的人影'],
+        'pages': [
+            {'n': f'{i:02d}',
+             'chars': ['xiaoniao', 'xiaobai'],
+             'panels': [
+                 {'pos': 'top', 'scene': '四貓走在荒原上',
+                  'lines': [{'speaker': 'xiaobai', 'shape': shapes[i - 1],
+                             'text': '那座塔越來越近了。'}]},
+                 {'pos': 'mid', 'scene': '塔門緊閉',
+                  # 用 shapes[i % 6] 而非固定 'OVAL':固定值在 i=2 時會撞上
+                  # shapes[i - 1](= shapes[1] = 'OVAL'),讓「好的企劃」在
+                  # 第 02 頁自己觸發「框型全部一樣」——基準本身就該是乾淨的。
+                  'lines': [{'speaker': 'xiaoniao', 'shape': shapes[i % 6],
+                             'text': '門上有符文。'}]},
+             ]}
+            for i in range(1, 7)
+        ],
+    }
+
+
+class TestSimplified(unittest.TestCase):
+    def test_抓到簡體字(self):
+        self.assertEqual(ne.has_simplified('这个世界的魔力'), '这')
+        self.assertEqual(ne.has_simplified('魔力回来了'), '来')
+
+    def test_正體中文放行(self):
+        self.assertIsNone(ne.has_simplified('這個世界的魔力，是我在配的。'))
+        self.assertIsNone(ne.has_simplified('得加 Token！'))
+
+    def test_容易被誤判的正體字要放行(self):
+        # 這幾個字在手打字表的版本裡被誤收成簡體,「那」幾乎每句話都有,
+        # 誤判會讓驗證器擋掉絕大多數合法企劃。
+        for s in ['那座塔上的光……不是紅色的。', '隱形只隱一半。這比沒隱還慘。',
+                  '四隻空瓶子，還敢慶祝。', '巨大的暗棕色長毛貓',
+                  '唯一的線索', '反而露出笑', '埋下伏筆', '準備好了']:
+            self.assertIsNone(ne.has_simplified(s), s)
+
+    def test_既有兩話的對白全部放行(self):
+        # 最有價值的一條:拿真實內容當回歸測試。手打字表就是敗在這裡——
+        # 誤收正體字之後,連自己已經上線的對白都會被判成簡體。
+        import pathlib as _p
+        root = _p.Path(__file__).parent.parent
+        for f in sorted((root / 'story').glob('ep*.md')):
+            bad = ne.has_simplified(f.read_text('utf-8'))
+            self.assertIsNone(bad, f'{f.name} 出現「{bad}」')
+
+    def test_空字串與None不炸(self):
+        self.assertIsNone(ne.has_simplified(''))
+        self.assertIsNone(ne.has_simplified(None))
+
+
+class TestValidate(unittest.TestCase):
+    def test_好的企劃通過(self):
+        self.assertEqual(ne.validate_plan(_good_plan(), 3, ['我們怎麼變成貓了？！']), [])
+
+    def test_內頁必須六頁(self):
+        p = _good_plan(); p['pages'] = p['pages'][:5]
+        errs = ne.validate_plan(p, 3, [])
+        # 直接斷言帶頁數的完整訊息,不接受「隨便哪個錯誤裡出現 6」就算過——
+        # 拿掉頁數檢查那行邏輯,這條斷言必須跟著失敗才算數。
+        self.assertIn('內頁必須六頁,拿到 5 頁', errs)
+
+    def test_缺欄位會被擋(self):
+        for field in ['title', 'desc', 'beats', 'pages']:
+            p = _good_plan(); del p[field]
+            errs = ne.validate_plan(p, 3, [])
+            # 驗的是「缺哪個欄位就報哪個欄位」,不是「回傳非空」——
+            # 後者就算欄位檢查認錯欄位,測試照樣會過。
+            self.assertTrue(any(f'缺欄位:{field}' in e for e in errs),
+                             f'缺 {field} 沒有對應的錯誤訊息:{errs}')
+
+    def test_對白含簡體字會被擋(self):
+        p = _good_plan()
+        p['pages'][0]['panels'][0]['lines'][0]['text'] = '这个世界的魔力'
+        errs = ne.validate_plan(p, 3, [])
+        self.assertTrue(any('簡體' in e for e in errs), errs)
+
+    def test_框型全部相同會被擋(self):
+        p = _good_plan()
+        for pg in p['pages']:
+            for pn in pg['panels']:
+                for ln in pn['lines']:
+                    ln['shape'] = 'OVAL'
+        errs = ne.validate_plan(p, 3, [])
+        self.assertTrue(any('框型' in e for e in errs), errs)
+
+    def test_不存在的框型會被擋(self):
+        p = _good_plan()
+        p['pages'][0]['panels'][0]['lines'][0]['shape'] = 'ROUNDED'
+        self.assertTrue(any('ROUNDED' in e for e in ne.validate_plan(p, 3, [])))
+
+    def test_小次郎不能用內心OS框(self):
+        p = _good_plan()
+        p['pages'][0]['panels'][0]['lines'][0]['speaker'] = 'kojiro'
+        p['pages'][0]['panels'][0]['lines'][0]['shape'] = 'THOUGHT'
+        errs = ne.validate_plan(p, 3, [])
+        self.assertTrue(any('kojiro' in e and 'THOUGHT' in e for e in errs), errs)
+
+    def test_小次郎用別的框型可以(self):
+        p = _good_plan()
+        p['pages'][0]['panels'][0]['lines'][0]['speaker'] = 'kojiro'
+        p['pages'][0]['panels'][0]['lines'][0]['shape'] = 'DEMON'
+        self.assertEqual(ne.validate_plan(p, 3, []), [])
+
+    def test_標題與既有話數重複會被擋(self):
+        p = _good_plan()
+        p['title'] = '我們怎麼變成貓了？！'
+        errs = ne.validate_plan(p, 3, ['我們怎麼變成貓了？！'])
+        self.assertTrue(any('標題' in e for e in errs), errs)
+
+    def test_不認識的角色會被擋(self):
+        p = _good_plan()
+        p['pages'][0]['chars'] = ['xiaoniao', '路人甲']
+        self.assertTrue(any('路人甲' in e for e in ne.validate_plan(p, 3, [])))
+
+    def test_沒有對白的頁面會被擋(self):
+        p = _good_plan()
+        p['pages'][2]['panels'] = [{'pos': 'top', 'scene': '空景', 'lines': []}]
+        errs = ne.validate_plan(p, 3, [])
+        self.assertTrue(any('對白' in e for e in errs), errs)
+
+
 if __name__ == '__main__':
     unittest.main()
