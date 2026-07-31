@@ -12,10 +12,49 @@
 
 分類 id（`app.js` 與 `build.py` 各存一份）：Ideas `DIC_kwDOToGp784DCVjL`、General `DIC_kwDOToGp784DCVjJ`。
 
-## 自動連載 pipeline（下一個要做的）
+## 自動連載 pipeline（已實作，未啟用）
 
-設計在 `docs/superpowers/specs/2026-07-31-auto-episode-pipeline-design.md`，還沒寫實作計劃。
-企劃那一步現在有東西可以讀了——首頁許願串（Ideas 分類）。
+程式在 `scripts/next_episode.py`，workflow 在 `.github/workflows/next-episode.yml`。
+
+分工：**gemini-web 只出文字**（企劃 JSON），**codex-image-service 出所有圖**。
+
+**要 yazelin 做的兩件事：**
+
+（secrets 已經設好了，`gh secret list` 看得到 `GEMINI_API_KEY` 與 `CODEX_IMAGE_KEY`。
+值來自 repo 外的 `/home/ct/novel-token-unlimited/漫畫/keys.json`，鍵名 `gemini-web`
+與 `codex-image-service`，**不是 catime 那組**。`GEMINI_WEB_BASE_URL` 與
+`CODEX_IMAGE_BASE_URL` 刻意不設，腳本內建 `https://ching-tech.ddns.net/gemini-web`
+與 `.../codex-image`，只有服務搬家才需要補上去覆蓋。）
+
+1. 到 Actions 頁面手動跑一次「下一話」，看 PR 的樣子與手機可讀性。
+   **`workflow_dispatch` 只認得出 default branch 上的 workflow**，所以這條 PR
+   要先 merge 進 `main`，Actions 頁面才看得到「下一話」這個按鈕
+2. 滿意之後把 workflow 裡 `schedule:` 那三行的註解拿掉，cron 才會開始跑
+
+**本機怎麼試：**
+
+先裝唯一的相依（Ubuntu 24.04 需要 `--break-system-packages`）：
+
+```bash
+pip install --user --break-system-packages opencc-python-reimplemented
+```
+
+```bash
+# 金鑰只從環境變數讀,不要寫進任何檔案
+export GEMINI_API_KEY=$(python3 -c "import json;print(json.load(open('/home/ct/novel-token-unlimited/漫畫/keys.json'))['gemini-web'])")
+
+# 只出企劃,存檔,不出圖不落檔
+python3 scripts/next_episode.py --plan-only /tmp/plan.json
+
+# 用現成企劃驗證整條線的前半段
+python3 scripts/next_episode.py --plan-from /tmp/plan.json --dry-run
+
+# 跑完但不出圖(會真的寫檔,記得先開分支)
+python3 scripts/next_episode.py --plan-from /tmp/plan.json --skip-images
+
+# 單元測試
+python3 -m unittest discover -s scripts -p 'test_*.py' -v
+```
 
 ## 行動版留下的技術債
 
