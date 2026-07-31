@@ -276,6 +276,13 @@ def validate_plan(plan, next_n, titles):
         for c in pg.get('chars') or []:
             if c not in CHARS:
                 errs.append(f'第 {n} 頁出現不認識的角色:{c}')
+        # world 是選配欄位,但寫了就必須是 cast.json 裡真的有設定圖的 id——
+        # 打錯字會被 page_refs 靜靜忽略,那一格就退回沒有鎖的狀態,結果是圖
+        # 漂了卻沒有任何地方報錯。
+        for w in pg.get('world') or []:
+            if w not in prompt.WORLD_KEYS:
+                errs.append(f'第 {n} 頁指名了不存在的道具/場景:{w}'
+                            f'(可用的:{"、".join(prompt.WORLD_KEYS) or "無"})')
 
         page_shapes = []
         page_lines = 0
@@ -321,6 +328,7 @@ _PLAN_SHAPE = """{
   "pages": [
     { "n": "01",
       "chars": ["出場角色的 slug"],
+      "world": ["這一頁畫面上出現的道具/場景 id,沒有就給空陣列"],
       "panels": [
         { "pos": "top|mid|bottom",
           "scene": "這一格畫什麼,英文,給繪圖模型看",
@@ -339,6 +347,12 @@ EPISODE_KINDS = """這一話可以是下面任何一種，你自己選最適合�
 
 一年五十二話沒辦法每話都推伏筆，硬推會把線燒完。但不管哪一種，都不可以跟
 既有設定矛盾，角色性格也不能走鐘。"""
+
+
+def _world_hint():
+    """把 cast.json 的道具/場景翻成 id=中文名,讓編劇知道每個 id 是什麼東西。"""
+    w = prompt._CAST.get('world', {})
+    return '、'.join(f'{k}={v["name"]}' for k, v in w.items()) or '無'
 
 
 def build_planner_prompt(canon, wishes):
@@ -368,6 +382,9 @@ def build_planner_prompt(canon, wishes):
 - 內頁正好 6 頁，每頁 2 到 3 個分格
 - `shape` 只能是這七種之一：{' / '.join(sorted(prompt.SHAPES))}
 - 角色 slug 只能是：{' / '.join(sorted(CHARS))}
+- `world` 只能填這些 id：{' / '.join(prompt.WORLD_KEYS) or '（目前沒有）'}
+  （{_world_hint()}）
+  **畫面上看得到那樣東西的每一頁都要填**，這是它不跑樣的唯一依據；沒出現就給空陣列
 - **同一頁的框型不可以全部一樣**，框型要跟著情緒走
 - 對白一律正體中文（台灣用語），一頁 3 到 6 句，句子不要長
 - kojiro 不可以用 THOUGHT 框，他沒有前世可以浮出來
@@ -462,13 +479,26 @@ def page_body(page):
     return "\n".join(out)
 
 
+# 參考圖張數上限。codex-image-service 的 API 本身沒有張數限制,真正的限制
+# 是稀釋:塞太多張,特徵會開始互相污染。8 是 comic-studio 實測的上限。
+MAX_REFS = 8
+
+
 def page_refs(page):
-    """該頁要傳哪幾張參考圖。image 1 永遠是畫風,之後接出場角色。
+    """該頁要傳哪幾張參考圖,依優先序排。
+
+    優先序:畫風錨 → 這一格要鎖的道具/場景 → 出場角色的設定圖 → 前世。
+    道具排在角色前面是因為它決定這一格長什麼樣;而且被上限截掉時,先被丟掉的
+    應該是排最後的補充圖,不是鎖。通行證就是漂在沒有這一層的時候——它沒有
+    自己的設定圖,整頁 prompt 裡對它唯一的描述還是錯的。
 
     有 THOUGHT 框代表畫面上會有前世的記憶泡,那就要多帶前世設定圖——
     只給文字描述的話四個人全會畫錯。
     """
     keys = ['style']
+    for w in page.get('world') or []:
+        if w in prompt.WORLD_KEYS and w not in keys:
+            keys.append(w)
     for c in page.get('chars') or []:
         k = SPEAKER_REF.get(c)
         if k and k not in keys:
@@ -478,7 +508,7 @@ def page_refs(page):
                  for ln in pn.get('lines') or [])
     if has_os and 'past' not in keys:
         keys.append('past')
-    return keys
+    return keys[:MAX_REFS]
 
 
 CN = '一二三四五六七八九十'

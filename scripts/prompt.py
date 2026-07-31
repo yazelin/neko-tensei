@@ -2,34 +2,40 @@
 """生圖 prompt 的單一來源。pipeline 與人工重跑共用同一份,別各寫一份。
 
 規則的完整說明在 story/README.md。這裡是那些規則的可執行版本。
+
+**設定資料本身不寫在這裡,一律讀 story/cast.json。** 這個檔只負責組裝。
+分成兩份手寫的下場已經發生過一次:cast.json 寫「樹在爪上」,這裡的 SHEET
+跟著寫 tree above a paw,而正典上那個紋章既不是樹也沒有肉球——模型很聽話
+地照錯的描述畫,通行證就漂成了掛著繩子的金懷錶。
 """
+import json
+import pathlib
+
+CAST_PATH = pathlib.Path(__file__).parent.parent / 'story' / 'cast.json'
+_CAST = json.loads(CAST_PATH.read_text('utf-8'))
+
+# cast.json 的圖片路徑以 root 為基準(root 相對於 cast.json 自己的位置),
+# 這個專案裡等於 repo 根目錄,跟 REF 一直以來的慣例相同。
+_BASE = (CAST_PATH.parent / _CAST.get('root', '.')).resolve()
 
 # 參考圖。image 1 永遠是第一話成品頁,鎖畫風、上墨感與手寫黑體字;
-# 之後接該頁出場角色的設定圖。光靠文字描述角色會漂——寫「圓形金牌」
-# 模型會畫成肉球牌,所以設定圖一定要傳。
-REF = {
-    'style':    ('images/ep1/07.webp',
-                 'the finished page 1 art style, inking and hand-lettered bold Chinese type'),
-    'xiaoniao': ('story/refs/xiaoniao.webp', 'MAGE CAT model sheet'),
-    'xiaobai':  ('story/refs/xiaobai.webp',  'SWORDSMAN CAT model sheet'),
-    'uncle':    ('story/refs/uncle.webp',    'SAMURAI CAT model sheet'),
-    'leo':      ('story/refs/leo.webp',      'ROGUE CAT model sheet'),
-    'kojiro':   ('story/refs/kojiro.webp',   'DEMON KING CAT model sheet'),
-    'past':     ('story/refs/past-four.webp',
-                 'model sheet of the four heroes FORMER HUMAN SELVES, '
-                 'left to right: mage / swordsman / samurai / rogue'),
-}
+# 之後接這一格要鎖的道具/場景,再接出場角色的設定圖。光靠文字描述會漂——
+# 寫「圓形金牌」模型會畫成肉球牌,所以設定圖一定要傳。
+REF = {'style': (_CAST['style_ref']['path'], _CAST['style_ref']['desc'])}
+for _k, _v in list(_CAST['cast'].items()) + list(_CAST.get('world', {}).items()):
+    REF[_k] = (_v['ref'], _v['desc'])
+
+# 哪些 key 是道具/場景(而不是角色)。page_refs 與道具段都靠這個分流。
+WORLD_KEYS = tuple(_CAST.get('world', {}))
 
 SHAPES = {'SHOUT', 'OVAL', 'WEAK', 'TREMBLE', 'THOUGHT', 'DEMON', 'CAPTION'}
 
 BASE = """Same art style as reference image 1: richly detailed vibrant anime fantasy illustration, painterly digital art, glowing magic particles, floating islands and crystal spires in the sky, saturated blues purples and golds. Vertical manga page, THREE horizontal panels stacked top to bottom, separated by thin white gutters, portrait aspect ratio 2:3."""
 
-SHEET = """CHARACTER SHEET - the model sheets provided as reference images are the authority. Copy every listed feature; a character is wrong if any of these is missing.
-- MAGE CAT: long-haired brown-grey Maine Coon. Round thin gold-rimmed glasses, ALWAYS clearly visible on her face. Deep blue robe with gold trim. Tall golden staff topped with a large blue orb. Amber eyes. TWO SMALL BIRDS ARE ALWAYS WITH HER: one plump songbird perched on the head of her staff, and one tiny chick perched on the upper-left of her head like a hair clip. Their species, colour and accessories may differ from panel to panel - birds simply come to her; that is why she is called 小鳥不啾. Neither bird ever opens its beak.
-- SWORDSMAN CAT: young brown tabby. Silver plate armour with leather straps and buckles, a red scarf-cape, bare head with NO headband and NO hat of any kind. Big amber eyes, fangs showing, energetic. (His 必勝 headband belongs to his former human self only - never draw it on the cat.)
-- SAMURAI CAT: white tiger-striped cat. Dark navy lacquered samurai armour, red cord sash, and a round gold medallion hanging on his chest with the single Chinese character 貓 engraved on it. Blue eyes, stern middle-aged look.
-- ROGUE CAT: orange tabby. Black hooded cloak covered in gold paw-print buckles. Brown eyes, sly smirk.
-- DEMON KING CAT: enormous dark chocolate-brown long-haired cat. Glowing red eyes, black-and-crimson cape, heavy gold chain across the chest, and a round red crest of a tree above a paw."""
+SHEET = "\n".join(
+    ["CHARACTER SHEET - the model sheets provided as reference images are the authority."
+     " Copy every listed feature; a character is wrong if any of these is missing."]
+    + [f"- {v['sheet']}" for v in _CAST['cast'].values() if v.get('sheet')])
 
 PAST = """
 
@@ -64,12 +70,30 @@ REMINDER = ("FINAL CHECK before you draw: the balloons on this page must NOT all
 NO_TEXT = {'kojiro', 'cover'}
 
 
+def world_block(keys):
+    """這一格要鎖的道具/場景。沒有就回 None。
+
+    順序上排在 CHARACTER SHEET 之前:場景與道具決定這一格長什麼樣,角色是
+    放進去的東西(照 comic-studio 的 world 庫慣例)。
+    """
+    items = [_CAST['world'][k]['sheet'] for k in keys if k in WORLD_KEYS]
+    if not items:
+        return None
+    return ("PROPS AND PLACES - the reference images are the authority for these."
+            " Copy them exactly; they must look the same in every panel and every episode.\n"
+            + "\n".join(f"- {s}" for s in items))
+
+
 def build_prompt(name, keys, body):
     """組一頁的完整 prompt。name 在 NO_TEXT 裡的頁面沒有對白也沒有對話框。"""
     manifest = "REFERENCE IMAGES:\n" + "\n".join(
         f"- image {i + 1}: {REF[k][1]}" for i, k in enumerate(keys))
     sheet = SHEET + PAST if 'past' in keys else SHEET
-    parts = [BASE, manifest, sheet]
+    parts = [BASE, manifest]
+    world = world_block(keys)
+    if world:
+        parts.append(world)
+    parts.append(sheet)
     if name not in NO_TEXT:
         parts += [SHAPES_BLOCK, RULES]
     out = "\n\n".join(parts) + "\n\n" + body
