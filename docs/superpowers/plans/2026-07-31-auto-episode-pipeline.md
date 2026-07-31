@@ -1860,9 +1860,12 @@ Expected：建立成功，或 `already exists`（都可以）。
 **要 yazelin 做的三件事：**
 
 1. 設 repo secrets（`gh secret set <NAME>`）——目前 `gh secret list` 是空的：
-   - `GEMINI_API_KEY`、`GEMINI_WEB_BASE_URL`（gemini-web 發的金鑰，本機拿不到，
-     跟 catime 用的是同一組）
-   - `CODEX_IMAGE_KEY`、`CODEX_IMAGE_BASE_URL`（跟 catime 同名同值）
+   - `GEMINI_API_KEY`、`CODEX_IMAGE_KEY`：**這兩把是必要的**。值在 repo 外的
+     `/home/ct/novel-token-unlimited/漫畫/keys.json`，鍵名分別是 `gemini-web`
+     與 `codex-image-service`。**不是 catime 那組**，別拿錯
+   - `GEMINI_WEB_BASE_URL`、`CODEX_IMAGE_BASE_URL`：**可以不設**。腳本內建
+     `https://ching-tech.ddns.net/gemini-web` 與 `.../codex-image`，只有服務
+     搬家才需要用 secret 覆蓋掉
 2. 到 Actions 頁面手動跑一次「下一話」，看 PR 的樣子與手機可讀性
 3. 滿意之後把 workflow 裡 `schedule:` 那三行的註解拿掉，cron 才會開始跑
 
