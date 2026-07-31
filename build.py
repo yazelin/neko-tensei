@@ -7,7 +7,7 @@
   3. python3 build.py
 角色頁(char-*.html)與首頁的文案是手寫的,本腳本只碰標記之間的區塊。
 """
-import json, pathlib, re, sys
+import html, json, pathlib, re, sys
 
 ROOT = pathlib.Path(__file__).parent
 CFG = json.loads((ROOT / 'episodes.json').read_text('utf-8'))
@@ -86,7 +86,7 @@ def build_episode(ep, prev, nxt):
         extra = ' fetchpriority="high"' if i == 0 else ' loading="lazy"'
         out.append(f'  <img id="p{i}" src="../images/ep{ep["n"]}/{p["f"]}"\n'
                    f'       width="1024" height="1536"{extra}\n'
-                   f'       alt="{p["alt"]}">\n')
+                   f'       alt="{html.escape(p["alt"], quote=True)}">\n')
     out.append('  <p class="credit">%s</p>\n' % ep['credit'])
     out.append('  <nav class="reader-nav">\n    <a class="btn ghost" href="../">回首頁</a>\n')
     if prev:
@@ -135,7 +135,7 @@ def main():
     first, last = EPS[0], EPS[-1]
     hero = (f'      <a class="cover" href="ep/{first["n"]}.html" aria-label="開始閱讀第{zh(first["n"])}話">\n'
             f'        <img src="images/ep{first["n"]}/{first["pages"][0]["f"]}" width="1024" height="1536"\n'
-            f'             alt="{first["pages"][0]["alt"]}" fetchpriority="high">\n'
+            f'             alt="{html.escape(first["pages"][0]["alt"], quote=True)}" fetchpriority="high">\n'
             f'      </a>\n'
             f'      <div>\n'
             f'        <a class="btn" href="ep/{first["n"]}.html">開始閱讀 第{zh(first["n"])}話</a>\n'

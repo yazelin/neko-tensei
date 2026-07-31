@@ -6,6 +6,7 @@
 import io
 import json
 import pathlib
+import re
 import subprocess
 import sys
 import unittest
@@ -662,6 +663,39 @@ class TestRender(unittest.TestCase):
         b = ne.pr_body(_good_plan(), 3, ['想看貓咪泡溫泉'], wish_err=err)
         self.assertIn('讀許願失敗', b)
         self.assertNotIn('讀了 1 則社群許願', b)
+
+    def test_PR內文圖片連結指向草稿分支不是main(self):
+        # code review 抓到的 Critical:pr_body 原本用 blob/HEAD,在 GitHub
+        # 上會解析成預設分支(main)——但這一話的新圖只在尚未合併的分支上,
+        # main 沒有,附出來的圖全是壞連結,「人看圖再按 merge」的閘門形同
+        # 虛設。改用 raw.githubusercontent.com 指到實際的草稿分支。
+        b = ne.pr_body(_good_plan(), 3, [], branch='auto/ep3')
+        self.assertIn(
+            'https://raw.githubusercontent.com/yazelin/neko-tensei/'
+            'auto/ep3/images/ep3/01.webp', b)
+        self.assertNotIn('blob/HEAD', b)
+
+    def test_PR內文沒給branch時預設用auto_epN(self):
+        # branch 沒傳的話要有一個合理預設,不能整個炸掉或退回壞連結。
+        b = ne.pr_body(_good_plan(), 3, [])
+        self.assertIn('auto/ep3', b)
+        self.assertNotIn('blob/HEAD', b)
+
+    def test_分鏡表格對白含管線符號不會切壞表格(self):
+        # code review 抓到的 Important:表格欄位值裡的 | 沒跳脫,對白裡的
+        # | 會被 markdown 當成分欄符號,把一列切成錯的欄數——這部漫畫角色
+        # 是工程師,對白出現 | 不是罕見情況。這裡直接數那一列「沒有被跳脫
+        # 的 |」數量,好的表格列(4 欄)固定是 5 個:首尾各一,欄與欄之間 3
+        # 個。如果 | 沒跳脫,對白裡多的那個 | 會讓這個數字變成 6。
+        p = _good_plan()
+        p['pages'][0]['panels'][0]['lines'][0]['text'] = '訊息 | 收到了嗎'
+        md = ne.render_storyboard(p, 3)
+        line = next(l for l in md.splitlines() if '收到了嗎' in l)
+        unescaped = re.findall(r'(?<!\\)\|', line)
+        self.assertEqual(len(unescaped), 5,
+                         f'對白裡的 | 沒被跳脫,表格列被切成了 {len(unescaped) - 1} 欄:{line}')
+        # 跳脫後的內容還是要看得到原本的對白,不能整段被吃掉。
+        self.assertIn('訊息 \\| 收到了嗎', md)
 
 
 if __name__ == '__main__':

@@ -493,6 +493,14 @@ def _page_alt(page):
     return (scene + '：' + says)[:180] if says else scene[:180]
 
 
+def _cell(s):
+    """markdown 表格欄位值裡的 `|` 要轉成 `\\|`,不然會被當成分欄符號,
+    把整列切成錯的欄數——這部漫畫角色是工程師,對白出現 `|` 不是罕見情況。
+    換行也順手換成空格,原因一樣:換行在表格列裡會直接把那一列切斷。
+    """
+    return (s or '').replace('|', '\\|').replace('\n', ' ')
+
+
 def render_storyboard(plan, n):
     out = [f"# 第{_zh(n)}話：{plan['title']}\n",
            '先讀 [`story/README.md`](README.md) 的鐵律與框型表再動手。'
@@ -510,8 +518,9 @@ def render_storyboard(plan, n):
             for ln in pn.get('lines') or []:
                 pos = pn.get('pos', '') if first else ''
                 scene = pn.get('scene', '') if first else ''
-                out.append(f"| {pos} | {scene} | "
-                           f"{NAME.get(ln['speaker'], ln['speaker'])}「{ln['text']}」 | {ln['shape']} |")
+                out.append(f"| {_cell(pos)} | {_cell(scene)} | "
+                           f"{_cell(NAME.get(ln['speaker'], ln['speaker']))}"
+                           f"「{_cell(ln['text'])}」 | {_cell(ln['shape'])} |")
                 first = False
         out.append(f"\n參考圖：{'、'.join(page_refs(pg))}\n")
         out.append('```')
@@ -531,7 +540,7 @@ def episode_entry(plan, n, date, has_cover):
             'credit': '劇情與作畫：Claude × gpt-image-2', 'pages': pages}
 
 
-def pr_body(plan, n, wishes, wish_err=None):
+def pr_body(plan, n, wishes, wish_err=None, branch=None):
     """組 PR 內文。
 
     `wish_err` 是 `fetch_wishes()` 回傳 tuple 的第二個值——「讀許願失敗」
@@ -540,7 +549,16 @@ def pr_body(plan, n, wishes, wish_err=None):
     認證、API 壞掉……),顯示成「沒有許願」等於把那些許願直接吃掉,而且
     沒有人會知道出過事。`wish_err` 非 None 時必須明講「讀許願失敗」與
     原因,不能落到「沒有許願」那個分支。
+
+    `branch` 是這份草稿所在的分支(workflow 裡是 `auto/ep{n}`)。這一話的
+    新圖只存在這個尚未合併的分支上,main 上還沒有——圖片連結絕對不能用
+    `blob/HEAD/…`,那會解析成預設分支(main),連到的是不存在的檔案。
+    這條 pipeline 的整個設計就是「人看圖、按 merge」,圖是壞連結,人工
+    審查就等於在看不到要審的東西的情況下按 merge,閘門形同虛設。改用
+    `raw.githubusercontent.com/{branch}/…`——直接指到分支上的原始檔案,
+    不會被 GitHub markdown 的相對路徑規則影響。
     """
+    branch = branch or f'auto/ep{n}'
     kind = plan.get('kind') or '推進主線'
     if wish_err is not None:
         wish_line = f"讀許願失敗，不是沒有人許願：{wish_err}"
@@ -567,7 +585,9 @@ def pr_body(plan, n, wishes, wish_err=None):
                '整頁的笑點沒了，而讀分鏡檔案完全看不出來。\n')
     for pg in plan['pages']:
         out.append(f"\n### 第 {pg['n']} 頁\n")
-        out.append(f"![第 {pg['n']} 頁](../blob/HEAD/images/ep{n}/{pg['n']}.webp?raw=true)\n")
+        out.append(f"![第 {pg['n']} 頁]"
+                   f"(https://raw.githubusercontent.com/yazelin/neko-tensei/{branch}"
+                   f"/images/ep{n}/{pg['n']}.webp)\n")
         out.append('劇本說的：')
         for pn in pg.get('panels') or []:
             out.append(f"- {pn.get('pos', '')}｜{pn.get('scene', '')}")
