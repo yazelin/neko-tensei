@@ -6,7 +6,7 @@
 
 ## 誕生故事
 
-2026-07-30，[LINE 的 C# 社群](https://line.me/ti/g2/PmukABqgPFrk7tMm8qt3AtHyvtNPY4dVd1HRXw)裡一場閒聊。聊著聊著，群友的暱稱一個個變成了角色，AI「[擎添助理](https://ai.ching-tech.com/ctos-lite)」把這些哏畫成了漫畫原畫初稿，於是有了這部作品。
+2026-07-30，[LINE 的 C# 社群](https://line.me/ti/g2/PmukABqgPFrk7tMm8qt3AtHyvtNPY4dVd1HRXw)裡一場閒聊。聊著聊著，群友的暱稱一個個變成了角色。我把這些哏講給 AI「[擎添助理](https://ai.ching-tech.com/ctos-lite)」聽、請它畫成漫畫原畫初稿，再貼回群裡分享，於是有了這部作品。
 
 後續由 Claude 搭配 gpt-image-2 接手：做成可離線閱讀的 PWA 網站、補上角色頁，並生成第二話的內容。
 
@@ -74,4 +74,7 @@ service worker 的 scope 與各自的慣例都要求如此。
 
 ## 授權
 
-圖文內容採 [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/deed.zh-hant) 授權．林亞澤與 [LINE C# 社群](https://line.me/ti/g2/PmukABqgPFrk7tMm8qt3AtHyvtNPY4dVd1HRXw)群友。
+兩份授權，分開看：
+
+- **圖文內容**（漫畫頁、角色圖、劇本與站上文案）採 [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/deed.zh-hant)．林亞澤與 [LINE C# 社群](https://line.me/ti/g2/PmukABqgPFrk7tMm8qt3AtHyvtNPY4dVd1HRXw)群友。見 [LICENSE](LICENSE)。
+- **程式碼**（`build.py`、`scripts/`、workflow、樣板、CSS/JS）採 MIT．林亞澤。見 [LICENSE-CODE](LICENSE-CODE)。想拿這條產線去畫你自己的漫畫，隨便拿。
