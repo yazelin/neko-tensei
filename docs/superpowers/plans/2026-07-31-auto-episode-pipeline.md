@@ -1471,7 +1471,7 @@ spec 的護欄要求「企劃不過重試一次、出圖重試三次」，也要
   - `plan_with_retry(canon: dict, wishes: list[str], titles: list[str], n: int) -> dict` — 失敗丟 `RuntimeError`
   - `IMG_RETRIES: int` — `3`
 
-- [ ] **Step 1: 加失敗的測試**
+- [x] **Step 1: 加失敗的測試**
 
 在 `scripts/test_next_episode.py` 加：
 
@@ -1545,7 +1545,7 @@ class TestRetry(unittest.TestCase):
         self.assertEqual(ne.IMG_RETRIES, 3)
 ```
 
-- [ ] **Step 2: 跑測試確認失敗**
+- [x] **Step 2: 跑測試確認失敗**
 
 ```bash
 cd ~/neko-tensei && python3 -m unittest discover -s scripts -p 'test_*.py' 2>&1 | tail -3
@@ -1553,7 +1553,7 @@ cd ~/neko-tensei && python3 -m unittest discover -s scripts -p 'test_*.py' 2>&1 
 
 Expected：`AttributeError: module 'next_episode' has no attribute 'cover_body'`
 
-- [ ] **Step 3: 實作**
+- [x] **Step 3: 實作**
 
 在 `scripts/next_episode.py` 的 `generate_image` 之後加：
 
@@ -1611,7 +1611,7 @@ def plan_with_retry(canon, wishes, titles, n):
     raise RuntimeError('企劃連兩次都沒過驗證:' + '；'.join(errs))
 ```
 
-- [ ] **Step 4: 讓 `main` 用上重試與封面**
+- [x] **Step 4: 讓 `main` 用上重試與封面**
 
 把 `main` 裡這一段：
 
@@ -1689,7 +1689,7 @@ def plan_with_retry(canon, wishes, titles, n):
     has_cover = cover_path.is_file()
 ```
 
-- [ ] **Step 5: 跑測試確認通過**
+- [x] **Step 5: 跑測試確認通過**
 
 ```bash
 cd ~/neko-tensei && python3 -m unittest discover -s scripts -p 'test_*.py' 2>&1 | tail -3
@@ -1697,7 +1697,7 @@ cd ~/neko-tensei && python3 -m unittest discover -s scripts -p 'test_*.py' 2>&1 
 
 Expected：`OK`，62 個測試通過。
 
-- [ ] **Step 6: 確認 `--plan-from --dry-run` 還是好的**
+- [x] **Step 6: 確認 `--plan-from --dry-run` 還是好的**
 
 ```bash
 cd ~/neko-tensei && python3 -c "
@@ -1711,7 +1711,7 @@ print('rc =', ne.main(['--plan-from',p.name,'--dry-run']))"
 
 Expected：印出 `企劃通過驗證: 黑塔上的另一個人` 與 `rc = 0`。
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add scripts/next_episode.py scripts/prompt.py scripts/test_next_episode.py
