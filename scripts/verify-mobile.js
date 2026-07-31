@@ -3,7 +3,6 @@
    全域裝的是 playwright@1.54.1;這個 repo 沒有 package.json,不要新增。 */
 const { chromium, devices } = require('playwright');
 const { spawn } = require('child_process');
-const net = require('net');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..');
@@ -21,21 +20,33 @@ function check(name, ok, detail) {
 }
 
 /* 固定 port 會撞上別的專案留在背景的 http.server——那時整輪其實是在驗別人的站,
-   而且會「看起來只是壞掉」而不是「port 被佔」。改成每次要一個空的 port。 */
-function freePort() {
+   而且會「看起來只是壞掉」而不是「port 被佔」。
+
+   原本的做法是自己 listen(0) 拿一個空 port、close 掉、再叫 http.server 綁上去。
+   那中間有一個 TOCTOU 窗口:close 到 spawn 之間,那個 port 可能被別人搶走。
+   改成讓 http.server 自己挑(綁 port 0),再從它印出來的那行問它拿到哪個——
+   從頭到尾沒有人放開過那個 port,窗口不存在。 */
+function serve() {
+  // -u 是必要的:stdout 接到 pipe 時 python 會整段緩衝,那行「Serving HTTP on
+  // ... port N」會卡在緩衝區裡永遠讀不到,我們就只會等到逾時。
+  const proc = spawn('python3', ['-u', '-m', 'http.server', '0', '--bind', '127.0.0.1'],
+    { cwd: ROOT, stdio: ['ignore', 'pipe', 'ignore'] });
   return new Promise((resolve, reject) => {
-    const s = net.createServer();
-    s.on('error', reject);
-    s.listen(0, '127.0.0.1', () => {
-      const p = s.address().port;
-      s.close(() => resolve(p));
+    let buf = '';
+    const timer = setTimeout(
+      () => reject(new Error(`http.server 沒有在 10 秒內回報 port,它印的是:${buf || '(什麼都沒有)'}`)),
+      10000);
+    proc.stdout.on('data', (d) => {
+      buf += d;
+      const m = buf.match(/port (\d+)/);
+      if (m) { clearTimeout(timer); resolve({ proc, port: Number(m[1]) }); }
+    });
+    proc.on('error', (e) => { clearTimeout(timer); reject(e); });
+    proc.on('exit', (code) => {
+      clearTimeout(timer);
+      reject(new Error(`http.server 還沒回報 port 就結束了,exit ${code}`));
     });
   });
-}
-
-function serve(port) {
-  return spawn('python3', ['-m', 'http.server', String(port), '--bind', '127.0.0.1'],
-    { cwd: ROOT, stdio: 'ignore' });
 }
 
 async function waitForServer() {
@@ -94,9 +105,8 @@ async function injectInsets(page) {
 }
 
 async function main() {
-  const port = await freePort();
+  const { proc: server, port } = await serve();
   BASE = `http://127.0.0.1:${port}`;
-  const server = serve(port);
   try {
     await waitForServer();
     const browser = await chromium.launch();

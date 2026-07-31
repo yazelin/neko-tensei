@@ -49,13 +49,15 @@
       "name": "中年攻城屍",
       "ref": "story/refs/uncle.webp",
       "desc": "SAMURAI CAT model sheet",
-      "sheet": "SAMURAI CAT: white tiger-striped cat. Dark navy lacquered samurai armour, red cord sash, and a round gold medallion hanging on his chest with the single Chinese character 貓 engraved on it. Blue eyes, stern middle-aged look.",
+      "sheet": "SAMURAI CAT: white tiger-striped cat. Dark navy lacquered samurai armour, red cord sash, and a round gold medallion with the single Chinese character 貓 engraved on it. The medallion hangs on a chain ON HIS CHEST, on the FRONT of his body: when he is drawn from behind, the chain crosses his shoulders and the back of his neck but the medallion itself is NOT visible - it is hanging on the far side of him, out of sight. Never draw the medallion on his back. Blue eyes, stern middle-aged look.",
       "must": [
         "白虎斑貓、藍眼、中年臉",
         "深藍漆武士鎧、紅繩腰帶",
         "胸前圓形金牌刻著一個「貓」字"
       ],
-      "must_not": []
+      "must_not": [
+        "背面視角還看得到「貓」字金牌(它掛在胸前,背影只會看到繞過肩頸的鎖鍊)"
+      ]
     },
     "leo": {
       "name": "里歐",
@@ -115,6 +117,23 @@
         "金色外框(金框是小次郎胸章,通行證是紅框)",
         "寫實樹木、樹冠枝椏",
         "肉球印"
+      ]
+    },
+    "tower": {
+      "name": "黑塔",
+      "ref": "story/refs/tower.webp",
+      "desc": "THE BLACK TOWER scene reference",
+      "sheet": "THE BLACK TOWER: the single enormous near-black gothic spire the heroes are heading for, rising alone out of a dark rocky plain. Carved masonry all over its surface, narrow vertical window slits, smaller buttress spires clustered around its base, and a tall arched iron gate at its foot. Crowning the very top is a large cold BLUE-WHITE glowing magic circle ringed with runes, casting pale light down its upper third - that circle is NOT the DEMON KING CAT's doing and is never red. The tower itself is BLACK stone: not blue, not purple, not brown. Only the magic circle and the window slits glow. It is one tower, never a castle and never a cluster of equal towers.",
+      "must": [
+        "單一巨大黑石哥德尖塔,立在暗色岩原上",
+        "塔頂一個冷藍白色魔法陣,環繞符文",
+        "塔基有拱形鐵門,四周簇擁較矮的扶壁小尖塔",
+        "滿佈雕刻石工與細長豎窗"
+      ],
+      "must_not": [
+        "紅色魔法陣(紅色是小次郎的,塔頂那個不是他點的)",
+        "藍色或紫色的塔身(塔是黑石,只有魔法陣與窗縫發光)",
+        "城堡、宮殿,或一群差不多高的塔"
       ]
     }
   },

@@ -66,13 +66,16 @@
 
     imgs.forEach(function (img) { io.observe(img); });
 
-    // 從首頁的「繼續閱讀」跳進來:圖是 lazy 的,等它有高度再捲
+    // 從首頁的「繼續閱讀」跳進來:每個 <img> 都有 width/height,瀏覽器會先用
+    // aspect-ratio 把高度佔好,所以下一幀捲過去位置就是對的。
+    //
+    // 原本這裡還掛了一個 load 監聽器想「等圖載完再捲一次」,實務上是 dead
+    // code——高度早就佔好了,那次補捲永遠不會改變結果,而且它從來沒被驗過。
+    // 拿掉是為了不要留一段看起來有在保護什麼、實際上沒有的程式。**如果哪天
+    // 拿掉圖片的 width/height,這個假設就不成立,要把補捲加回來。**
     if (location.hash) {
       var target = document.getElementById(location.hash.slice(1));
-      if (target) {
-        requestAnimationFrame(function () { target.scrollIntoView(); });
-        target.addEventListener('load', function () { target.scrollIntoView(); }, { once: true });
-      }
+      if (target) requestAnimationFrame(function () { target.scrollIntoView(); });
     }
   }
 
@@ -112,7 +115,11 @@
         // 不管裝了還是按「以後再說」,這個 event 都不能再用第二次,
         // 標籤要一起還原——否則按取消之後再點同一格會被丟去誕生故事,
         // 而 beforeinstallprompt 同一次瀏覽不會再觸發,錯到重新載入為止。
-        deferred.userChoice.then(function () { deferred = null; labelAbout(); });
+        // then 跟 catch 都要還原:userChoice reject 時(瀏覽器把提示吃掉、
+        // 頁面在等待期間被隱藏都會發生)如果不還原,第四格會永遠卡在「安裝」,
+        // 而 beforeinstallprompt 同一次瀏覽不會再觸發,錯到重新載入為止。
+        var restore = function () { deferred = null; labelAbout(); };
+        deferred.userChoice.then(restore, restore);
       } else {
         // 誕生故事只在首頁,用相對路徑,角色頁按下去才不會是死連結
         location.href = './#origin';
