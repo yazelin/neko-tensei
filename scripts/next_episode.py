@@ -16,6 +16,7 @@ import argparse
 import base64
 import datetime
 import json
+import mimetypes
 import os
 import pathlib
 import re
@@ -323,6 +324,21 @@ def validate_plan(plan, next_n, titles):
 GEMINI_BASE = os.environ.get('GEMINI_WEB_BASE_URL') or 'https://ching-tech.ddns.net/gemini-web'
 GEMINI_MODEL = os.environ.get('GEMINI_MODEL') or 'gemini-2.5-flash'
 
+# 企劃(寫劇本)走哪個後端。預設 gemini,fork 的人把 PLANNER_PROVIDER 設成
+# openai 就能改用任何 OpenAI 相容端點(OpenAI 本尊、Groq、Ollama、OpenRouter),
+# 差別只有 OPENAI_BASE_URL 跟模型名。gemini 這條也不綁我的中繼:把
+# GEMINI_WEB_BASE_URL 指到 https://generativelanguage.googleapis.com
+# 就是官方端點,腳本組出來的路徑本來就是官方那個形狀。
+# 所有對外請求都要帶 User-Agent。Groq 擋在 Cloudflare 後面,看到 urllib 的預設
+# UA(Python-urllib/3.x)直接回 403 error code 1010,而那個回應裡沒有任何字說
+# 是 UA 的問題,只會看起來像金鑰壞了。實測:換成任何自訂 UA 就通。
+UA = 'neko-tensei-pipeline/1 (+https://github.com/yazelin/neko-tensei)'
+
+PLANNER_PROVIDER = (os.environ.get('PLANNER_PROVIDER') or 'gemini').lower()
+OPENAI_BASE = os.environ.get('OPENAI_BASE_URL') or 'https://api.openai.com/v1'
+OPENAI_MODEL = os.environ.get('OPENAI_MODEL') or 'gpt-4o-mini'
+OPENAI_MAX_TOKENS = int(os.environ.get('OPENAI_MAX_TOKENS') or 32768)
+
 _PLAN_SHAPE = """{
   "title": "不含「第N話」三個字的標題",
   "kind": "推進主線 | 日常番 | 烏龍 | 角色刻畫",
@@ -406,7 +422,66 @@ def _strip_fence(s):
 
 
 def call_llm(text):
-    """打 gemini-web 取得企劃文字。"""
+    """取得企劃文字。看 PLANNER_PROVIDER 決定打誰。"""
+    if PLANNER_PROVIDER == 'openai':
+        return _llm_openai(text)
+    if PLANNER_PROVIDER != 'gemini':
+        raise RuntimeError(f'不認得的 PLANNER_PROVIDER:{PLANNER_PROVIDER}(只有 gemini / openai)')
+    return _llm_gemini(text)
+
+
+def _llm_openai(text):
+    """打任何 OpenAI 相容的 chat completions 端點。
+
+    Groq、Ollama、OpenRouter 都是同一個形狀,差別只在 OPENAI_BASE_URL 與模型名。
+    `response_format` 要 json_object,少了它模型很愛包一層 markdown 圍籬——
+    _strip_fence 擋得掉,但能不用擋就不要擋。
+    """
+    key = os.environ.get('OPENAI_API_KEY', '')
+    if not key:
+        raise RuntimeError('沒有 OPENAI_API_KEY,無法呼叫 OpenAI 相容端點')
+    # 上限一定要設,而且要設大。實測(2026-08-01,同一份 prompt):
+    #   Groq openai/gpt-oss-120b 不設 → finish_reason=length,3072 就被切斷;
+    #                            設了 → 3865 token 完成
+    #   llmshare glm-5.2(推理模型)→ 11179 token 才完成,16384 全部燒光還沒寫完
+    # 推理模型的 reasoning_content 也吃這份額度,所以「一份企劃才 4000 token」
+    # 這個直覺會害人。上限只是上限,計費看實際產出,往大裡設沒有壞處。
+    body = json.dumps({
+        'model': OPENAI_MODEL,
+        'messages': [{'role': 'user', 'content': text}],
+        'response_format': {'type': 'json_object'},
+        'max_tokens': OPENAI_MAX_TOKENS,
+    }).encode()
+    req = urllib.request.Request(
+        f'{OPENAI_BASE}/chat/completions', body,
+        {'Content-Type': 'application/json', 'Authorization': f'Bearer {key}',
+         'User-Agent': UA})
+    with urllib.request.urlopen(req, timeout=300) as f:
+        payload = json.load(f)
+    choices = (payload.get('choices') if isinstance(payload, dict) else None) or []
+    choice = choices[0] if choices else {}
+    content = (choice.get('message') or {}).get('content')
+
+    # 被 max_tokens 切斷時 content 是一段半截的 JSON,直接回去會在 json.loads
+    # 那裡丟「Expecting value」,跟真正的原因差很遠。這裡先認出來,錯誤訊息
+    # 直接講要調哪個環境變數。
+    if choice.get('finish_reason') == 'length':
+        raise RuntimeError(
+            f'{OPENAI_MODEL} 的輸出被切斷(finish_reason=length,目前 '
+            f'OPENAI_MAX_TOKENS={OPENAI_MAX_TOKENS})。調大再跑一次;推理模型的'
+            '思考過程也吃這份額度,實測 glm-5.2 要 11000 以上才寫得完一份企劃。')
+    if content:
+        return content
+    # 裸 KeyError 看不出是被擋、額度用完、還是模型名打錯,把診斷資訊帶出來。
+    raise RuntimeError(
+        f'{OPENAI_MODEL} 回應裡沒有可用的文字內容'
+        '(取不到 choices[0].message.content)。'
+        f' finish_reason={choice.get("finish_reason")!r}'
+        f' payload 前 300 字:{json.dumps(payload, ensure_ascii=False)[:300]}')
+
+
+def _llm_gemini(text):
+    """打 Gemini 形狀的端點(我的自架中繼,或官方 generativelanguage)。"""
     key = os.environ.get('GEMINI_API_KEY', '')
     if not key:
         raise RuntimeError('沒有 GEMINI_API_KEY,無法呼叫 gemini-web')
@@ -415,7 +490,8 @@ def call_llm(text):
         'contents': [{'parts': [{'text': text}]}],
         'generationConfig': {'response_mime_type': 'application/json'},
     }).encode()
-    req = urllib.request.Request(url, body, {'Content-Type': 'application/json'})
+    req = urllib.request.Request(url, body,
+                                 {'Content-Type': 'application/json', 'User-Agent': UA})
     with urllib.request.urlopen(req, timeout=300) as f:
         payload = json.load(f)
     try:
@@ -432,7 +508,7 @@ def call_llm(text):
         finish_reason = candidates[0].get('finishReason') if candidates else None
         prompt_feedback = payload.get('promptFeedback') if isinstance(payload, dict) else None
         raise RuntimeError(
-            'gemini-web 回應裡沒有可用的文字內容'
+            f'{GEMINI_MODEL} 回應裡沒有可用的文字內容'
             '(取不到 candidates[0].content.parts[0].text)。'
             f' finishReason={finish_reason!r} promptFeedback={prompt_feedback!r}'
             f' payload 前 300 字:{json.dumps(payload, ensure_ascii=False)[:300]}') from None
@@ -451,6 +527,14 @@ def make_plan(canon, wishes):
 
 
 IMG_BASE = os.environ.get('CODEX_IMAGE_BASE_URL') or 'https://ching-tech.ddns.net/codex-image'
+
+# 出圖走哪個後端。預設 codex(我自架的 codex-image-service);fork 的人設成
+# gemini 就改打 Google 官方的影像模型,只要一把 AI Studio 金鑰,不必自架東西。
+# 沒有 gemini-web 這個選項:它的 /api/edit 只吃一張參考圖,而這條產線一頁
+# 最多要傳 8 張(畫風錨 + 道具/場景 + 每個出場角色),塞不進去。
+IMAGE_PROVIDER = (os.environ.get('IMAGE_PROVIDER') or 'codex').lower()
+GEMINI_IMAGE_BASE = os.environ.get('GEMINI_IMAGE_BASE_URL') or 'https://generativelanguage.googleapis.com'
+GEMINI_IMAGE_MODEL = os.environ.get('GEMINI_IMAGE_MODEL') or 'gemini-3.1-flash-image-preview'
 SPEAKER_REF = {'xiaoniao': 'xiaoniao', 'xiaobai': 'xiaobai',
                'uncle': 'uncle', 'leo': 'leo', 'kojiro': 'kojiro'}
 POS_LABEL = {'top': 'top', 'mid': 'middle', 'middle': 'middle', 'bottom': 'bottom'}
@@ -671,6 +755,64 @@ def save_image(raw, out):
 
 
 def generate_image(name, keys, body, out):
+    """出一張圖存到 out。看 IMAGE_PROVIDER 決定打誰。"""
+    if IMAGE_PROVIDER == 'gemini':
+        return _img_gemini(name, keys, body, out)
+    if IMAGE_PROVIDER != 'codex':
+        raise RuntimeError(f'不認得的 IMAGE_PROVIDER:{IMAGE_PROVIDER}(只有 codex / gemini)')
+    return _img_codex(name, keys, body, out)
+
+
+def _img_gemini(name, keys, body, out):
+    """打 Gemini 的影像模型。同步回圖,沒有 job 可以輪詢。
+
+    參考圖用 inline_data 一張一張塞進同一個 parts 陣列,順序跟 codex 那條
+    一樣(image 1 是畫風錨,後面才是道具與角色),因為 prompt 裡的
+    `REFERENCE IMAGES:` 是照順序指名的,順序錯了模型就對不上是誰。
+    """
+    key = os.environ.get('GEMINI_IMAGE_KEY') or os.environ.get('GEMINI_API_KEY', '')
+    if not key:
+        raise RuntimeError('沒有 GEMINI_IMAGE_KEY(或 GEMINI_API_KEY),無法出圖')
+    parts = [{'text': prompt.build_prompt(name, keys, body)}]
+    for k in keys:
+        p = ROOT / prompt.REF[k][0]
+        parts.append({'inline_data': {
+            'mime_type': mimetypes.guess_type(p.name)[0] or 'image/webp',
+            'data': base64.b64encode(p.read_bytes()).decode()}})
+    url = (f'{GEMINI_IMAGE_BASE}/v1beta/models/{GEMINI_IMAGE_MODEL}'
+           f':generateContent?key={key}')
+    req = urllib.request.Request(url, json.dumps({'contents': [{'parts': parts}]}).encode(),
+                                 {'Content-Type': 'application/json', 'User-Agent': UA})
+    t0 = time.time()
+    with urllib.request.urlopen(req, timeout=600) as f:
+        payload = json.load(f)
+    raw = _gemini_image_bytes(payload)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    save_image(raw, out)
+    print(f'  -> {name} ok {int(time.time() - t0)}s '
+          f'{out.stat().st_size / 1e6:.2f}MB', flush=True)
+
+
+def _gemini_image_bytes(payload):
+    """從回應裡挑出第一張圖的位元組。純函式,好測。
+
+    回應是 parts 陣列,文字與圖混在一起(模型常常先講一句「Here is…」),
+    所以要逐個找 inlineData,不能寫死 parts[0]。找不到就把 finishReason
+    帶出來——被安全機制擋掉時 parts 整個不存在,跟「模型只回了文字」是
+    兩種完全不同的狀況,錯誤訊息要分得出來。
+    """
+    cands = (payload.get('candidates') if isinstance(payload, dict) else None) or []
+    for part in ((cands[0].get('content') or {}).get('parts') or []) if cands else []:
+        data = (part.get('inlineData') or part.get('inline_data') or {}).get('data')
+        if data:
+            return base64.b64decode(data)
+    raise RuntimeError(
+        '出圖失敗:回應裡沒有任何 inlineData。'
+        f' finishReason={(cands[0].get("finishReason") if cands else None)!r}'
+        f' payload 前 300 字:{json.dumps(payload, ensure_ascii=False)[:300]}')
+
+
+def _img_codex(name, keys, body, out):
     """打 .11 的 codex-image-service,把圖存到 out。"""
     key = os.environ.get('CODEX_IMAGE_KEY', '')
     if not key:
@@ -681,7 +823,8 @@ def generate_image(name, keys, body, out):
         'size': '1024x1536', 'quality': 'high', 'count': 1,
         'reference_images_base64': refs,
     }).encode()
-    hdr = {'Authorization': f'Bearer {key}', 'Content-Type': 'application/json'}
+    hdr = {'Authorization': f'Bearer {key}', 'Content-Type': 'application/json',
+           'User-Agent': UA}
     req = urllib.request.Request(f'{IMG_BASE}/v1/images/jobs', body_json, hdr, method='POST')
     with urllib.request.urlopen(req, timeout=180) as f:
         job = json.load(f)
@@ -698,7 +841,8 @@ def generate_image(name, keys, body, out):
     while True:
         time.sleep(15)
         q = urllib.request.Request(f'{IMG_BASE}/v1/images/jobs/{job_id}',
-                                   headers={'Authorization': hdr['Authorization']})
+                                   headers={'Authorization': hdr['Authorization'],
+                                            'User-Agent': UA})
         with urllib.request.urlopen(q, timeout=60) as f:
             st = json.load(f)
         if st['status'] in ('succeeded', 'failed', 'error'):

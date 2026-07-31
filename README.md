@@ -72,6 +72,51 @@ service worker 的 scope 與各自的慣例都要求如此。
 
 `build.py` 會同步首頁列表、上一話／下一話、sitemap、離線快取清單與 `sw.js` 的兩個快取版號，這幾個地方都不用手改。版號是清單內容的 hash，改殼檔或換圖才會變，不必也不要手動 bump。
 
+## 想 fork 一份畫自己的漫畫
+
+換掉三個地方就是你自己的連載：`story/cast.json`（角色、設定圖、識別特徵、道具）、
+`story/README.md`（你這部作品的鐵律）、`episodes.json`（清空，從第一話開始）。
+
+`scripts/next_episode.py` 跟 `.github/workflows/next-episode.yml` 不用動，換後端靠環境變數：
+
+| 環境變數 | 預設 | 說明 |
+|---|---|---|
+| `PLANNER_PROVIDER` | `gemini` | 寫劇本走誰。`gemini` / `openai` |
+| `GEMINI_WEB_BASE_URL` | 我的自架中繼 | 設成 `https://generativelanguage.googleapis.com` 就是 Google 官方端點 |
+| `GEMINI_API_KEY` | 無 | 上面那條的金鑰 |
+| `OPENAI_BASE_URL` | `https://api.openai.com/v1` | 任何 OpenAI 相容端點：Groq、Ollama、OpenRouter |
+| `OPENAI_API_KEY` / `OPENAI_MODEL` | 無 / `gpt-4o-mini` | 同上 |
+| `OPENAI_MAX_TOKENS` | `32768` | 輸出上限。**別設小**，見下面那張表 |
+| `IMAGE_PROVIDER` | `codex` | 出圖走誰。`codex`（我自架的 codex-image-service）/ `gemini` |
+| `GEMINI_IMAGE_KEY` | 退回 `GEMINI_API_KEY` | 出圖用的金鑰，可以跟企劃那把分開 |
+| `GEMINI_IMAGE_MODEL` | `gemini-3.1-flash-image-preview` | 影像模型 id |
+
+**出圖端沒有 gemini-web 這個選項**：它的 `/api/edit` 只吃一張參考圖，而這條產線一頁最多
+要傳 8 張（畫風錨 ＋ 道具/場景 ＋ 每個出場角色）。少了參考圖，角色一定漂。
+
+實測（2026-08-01，同一份 prompt，企劃都通過驗證器）：
+
+| 端點 / 模型 | 耗時 | 產出 token | 結果 |
+|---|---|---|---|
+| Groq `openai/gpt-oss-120b` | 7 秒 | 3865 | 六頁，通過 |
+| Groq `llama-3.3-70b-versatile` | 4 秒 | — | 六頁，通過 |
+| Groq `qwen/qwen3.6-27b` | 12 秒 | — | 六頁，通過 |
+| llmshare `glm-5.2` | 76 秒 | 11179 | 六頁，通過 |
+
+**輸出上限是最容易踩的坑。** Groq 不設 `max_tokens` 時預設只給 3072，企劃寫到一半
+就被切斷（`finish_reason=length`），而半截 JSON 解析失敗的錯誤訊息跟真正的原因差很遠。
+推理模型更凶：glm-5.2 的思考過程也吃這份額度，16384 全燒光還沒寫完，要 11000 以上的
+實際產出才收得了尾。所以預設值訂 32768，腳本也會在被切斷時直接點名 `OPENAI_MAX_TOKENS`。
+
+另一個坑：**Groq 擋在 Cloudflare 後面，看到 Python 的預設 User-Agent 直接回 403
+（error code 1010）**，而回應裡沒有一個字提到 UA。腳本固定帶自己的 UA，所以不會撞到。
+
+出圖端目前只實測過 `codex`。`gemini` 那條寫好也有測試，但還沒拿真的 AI Studio 金鑰打過，
+**標記為未實測**。
+
+先跑 `python3 scripts/next_episode.py --plan-only /tmp/plan.json` 只出企劃不出圖，
+確認後端接通了再花出圖的錢。
+
 ## 授權
 
 兩份授權，分開看：

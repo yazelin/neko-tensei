@@ -16,7 +16,13 @@
 
 程式在 `scripts/next_episode.py`，workflow 在 `.github/workflows/next-episode.yml`。
 
-分工：**gemini-web 只出文字**（企劃 JSON），**codex-image-service 出所有圖**。
+分工：**企劃（文字）**與**出圖**各自可以換後端，看 `PLANNER_PROVIDER` 與
+`IMAGE_PROVIDER` 兩個環境變數，預設是 gemini-web 出文字、codex-image-service 出圖。
+別人 fork 要換成自己的服務時看 README 的「想 fork 一份畫自己的漫畫」那張表。
+
+實測過的組合（2026-08-01）：企劃端 Groq（gpt-oss-120b / llama-3.3-70b / qwen3.6-27b）
+與 llmshare glm-5.2 都出得了通過驗證器的六頁企劃。**出圖端只實測過 codex**，
+`IMAGE_PROVIDER=gemini` 那條有單元測試但還沒拿真的 AI Studio 金鑰打過。
 
 **要 yazelin 做的兩件事：**
 

@@ -3,6 +3,7 @@
 
 跑法: python3 -m unittest discover -s scripts -p 'test_*.py' -v
 """
+import base64
 import io
 import json
 import os
@@ -1266,6 +1267,100 @@ def _tree_snapshot():
                 st = p.stat()
                 snap.append((str(p), st.st_mtime_ns, st.st_size))
     return snap
+
+
+class TestBackendDispatch(unittest.TestCase):
+    """企劃與出圖各自可以換後端。fork 的人靠這兩個環境變數擺脫我的自架服務,
+    所以「分流有沒有真的分到」要有測試盯著——設錯了會靜靜打回預設的後端,
+    而預設那個別人根本沒有金鑰,錯誤訊息會指向完全無關的地方。
+    """
+
+    def _urlopen_returning(self, payload):
+        cm = unittest.mock.MagicMock()
+        cm.__enter__.return_value = io.BytesIO(json.dumps(payload).encode())
+        return cm
+
+    @patch.dict('os.environ', {'OPENAI_API_KEY': 'fake'})
+    @patch('next_episode.PLANNER_PROVIDER', 'openai')
+    @patch('next_episode.urllib.request.urlopen')
+    def test_openai相容端點取得企劃文字(self, mock_urlopen):
+        mock_urlopen.return_value = self._urlopen_returning(
+            {'choices': [{'message': {'content': '{"title": "x"}'}}]})
+        self.assertEqual(ne.call_llm('prompt'), '{"title": "x"}')
+        req = mock_urlopen.call_args[0][0]
+        self.assertTrue(req.full_url.endswith('/chat/completions'), req.full_url)
+        self.assertEqual(req.get_header('Authorization'), 'Bearer fake')
+
+    @patch.dict('os.environ', {'OPENAI_API_KEY': 'fake'})
+    @patch('next_episode.PLANNER_PROVIDER', 'openai')
+    @patch('next_episode.urllib.request.urlopen')
+    def test_openai回應沒有content時丟RuntimeError帶finish_reason(self, mock_urlopen):
+        mock_urlopen.return_value = self._urlopen_returning(
+            {'choices': [{'finish_reason': 'content_filter'}]})
+        with self.assertRaises(RuntimeError) as cm:
+            ne.call_llm('prompt')
+        self.assertIn('content_filter', str(cm.exception))
+
+    @patch.dict('os.environ', {'OPENAI_API_KEY': 'fake'})
+    @patch('next_episode.PLANNER_PROVIDER', 'openai')
+    @patch('next_episode.urllib.request.urlopen')
+    def test_請求要帶自訂UA與夠大的max_tokens(self, mock_urlopen):
+        # UA:Groq 擋在 Cloudflare 後面,看到 Python-urllib 的預設 UA 直接回
+        # 403 error code 1010,而回應裡沒有一個字提到 UA。實測換 UA 就通。
+        # max_tokens:沒設時 gpt-oss-120b 只寫了一頁企劃就收尾,驗證器擋下來,
+        # 但錯誤訊息會讓人以為是模型不聽話,其實是輸出上限太小。
+        mock_urlopen.return_value = self._urlopen_returning(
+            {'choices': [{'message': {'content': '{}'}}]})
+        ne.call_llm('prompt')
+        req = mock_urlopen.call_args[0][0]
+        self.assertNotIn('Python-urllib', req.get_header('User-agent') or '')
+        self.assertGreaterEqual(json.loads(req.data)['max_tokens'], 4096)
+
+    @patch.dict('os.environ', {'OPENAI_API_KEY': 'fake'})
+    @patch('next_episode.PLANNER_PROVIDER', 'openai')
+    @patch('next_episode.urllib.request.urlopen')
+    def test_輸出被切斷時錯誤訊息要點名max_tokens(self, mock_urlopen):
+        # 半截 JSON 直接回去,會在 json.loads 那裡丟「Expecting value」,
+        # 讓人以為是模型不照格式回。實際發生過:glm-5.2 把 16384 全燒在
+        # 推理上還沒寫完企劃。
+        mock_urlopen.return_value = self._urlopen_returning(
+            {'choices': [{'finish_reason': 'length',
+                          'message': {'content': '{"title": "半截'}}]})
+        with self.assertRaises(RuntimeError) as cm:
+            ne.call_llm('prompt')
+        self.assertIn('OPENAI_MAX_TOKENS', str(cm.exception))
+
+    @patch('next_episode.PLANNER_PROVIDER', 'llama-cpp')
+    def test_不認得的PLANNER_PROVIDER當場停下來(self):
+        # 靜靜 fallback 回 gemini 的話,錯誤會變成「沒有 GEMINI_API_KEY」,
+        # 跟真正的原因(名字打錯)差了十萬八千里。
+        with self.assertRaises(RuntimeError) as cm:
+            ne.call_llm('prompt')
+        self.assertIn('llama-cpp', str(cm.exception))
+
+    @patch('next_episode.IMAGE_PROVIDER', 'midjourney')
+    def test_不認得的IMAGE_PROVIDER當場停下來(self):
+        with self.assertRaises(RuntimeError) as cm:
+            ne.generate_image('01', ['style'], 'body', pathlib.Path('/tmp/x.webp'))
+        self.assertIn('midjourney', str(cm.exception))
+
+    def test_gemini出圖回應_文字與圖混在一起也挑得出圖(self):
+        # 模型很愛先講一句「Here is the image」再給圖,寫死 parts[0] 會挑到文字。
+        raw = ne._gemini_image_bytes({'candidates': [{'content': {'parts': [
+            {'text': 'Here is the image you asked for'},
+            {'inlineData': {'mimeType': 'image/png', 'data': base64.b64encode(b'PNGDATA').decode()}},
+        ]}}]})
+        self.assertEqual(raw, b'PNGDATA')
+
+    def test_gemini出圖回應_底線寫法的inline_data也吃得下(self):
+        raw = ne._gemini_image_bytes({'candidates': [{'content': {'parts': [
+            {'inline_data': {'data': base64.b64encode(b'WEBPDATA').decode()}}]}}]})
+        self.assertEqual(raw, b'WEBPDATA')
+
+    def test_gemini出圖被擋掉時丟RuntimeError帶finishReason(self):
+        with self.assertRaises(RuntimeError) as cm:
+            ne._gemini_image_bytes({'candidates': [{'finishReason': 'IMAGE_SAFETY'}]})
+        self.assertIn('IMAGE_SAFETY', str(cm.exception))
 
 
 if __name__ == '__main__':
