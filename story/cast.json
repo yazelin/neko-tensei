@@ -5,15 +5,19 @@
     "path": "images/ep1/07.webp",
     "desc": "the finished page 1 art style, inking and hand-lettered bold Chinese type"
   },
+  "cover_ref": {
+    "path": "images/ep2/00-cover.webp",
+    "desc": "the established cover layout: big title lockup, character name tags, bottom episode band"
+  },
   "cast": {
     "xiaoniao": {
       "name": "小鳥不啾",
       "ref": "story/refs/xiaoniao.webp",
       "desc": "MAGE CAT model sheet",
-      "sheet": "MAGE CAT: long-haired brown-grey Maine Coon. Round thin gold-rimmed glasses, ALWAYS clearly visible on her face. Deep blue robe with gold trim. Tall golden staff topped with a large blue orb. Amber eyes. TWO SMALL BIRDS ARE ALWAYS WITH HER: one plump songbird perched on the head of her staff, and one tiny chick perched on the upper-left of her head like a hair clip. Their species, colour and accessories may differ from panel to panel - birds simply come to her; that is why she is called 小鳥不啾. Neither bird ever opens its beak.",
+      "sheet": "MAGE CAT: the only long-haired Maine Coon in the cast - big, brown-grey, with a fluffy neck ruff and ear tufts, visibly larger and older than the small short-haired SWORDSMAN CAT (both are brown tabbies, so coat length and build are what tell them apart). Round thin gold-rimmed glasses, ALWAYS clearly visible on her face and NEVER on any other cat. Deep blue robe with gold trim. Tall golden staff topped with a large blue orb. Amber eyes. TWO SMALL BIRDS ARE ALWAYS WITH HER: one plump songbird perched on the head of her staff, and one tiny chick perched on the upper-left of her head like a hair clip. Their species, colour and accessories may differ from panel to panel - birds simply come to her; that is why she is called 小鳥不啾. Neither bird ever opens its beak.",
       "must": [
-        "長毛褐灰緬因貓、琥珀眼",
-        "圓形細金框眼鏡,臉上一定看得到",
+        "長毛褐灰緬因貓、琥珀眼(全劇唯一的長毛貓,身形比小白++大一號)",
+        "圓形細金框眼鏡,臉上一定看得到(全劇只有她戴眼鏡)",
         "深藍金邊法袍",
         "頂端大藍寶石的金法杖",
         "法杖上停一隻鳥、頭頂左側停一隻鳥(品種顏色配件每頁可以不同,牠們從不張嘴)"
@@ -24,13 +28,18 @@
       "name": "小白++",
       "ref": "story/refs/xiaobai.webp",
       "desc": "SWORDSMAN CAT model sheet",
-      "sheet": "SWORDSMAN CAT: young brown tabby. Silver plate armour with leather straps and buckles, a red scarf-cape, bare head with NO headband and NO hat of any kind. Big amber eyes, fangs showing, energetic. (His 必勝 headband belongs to his former human self only - never draw it on the cat.)",
+      "sheet": "SWORDSMAN CAT: young SHORT-HAIRED brown tabby, small and kitten-like next to the mage cat. Sleek short coat with crisp dark tabby stripes and NO long fur, NO fluffy neck ruff, NO ear tufts - he must never be mistaken for the long-haired MAGE CAT, who is the only Maine Coon here. He wears NO glasses of any kind; the round gold-rimmed glasses belong to the MAGE CAT alone. Silver plate armour with leather straps and buckles, a red scarf-cape, bare head with NO headband and NO hat of any kind. Big amber eyes, fangs showing, energetic. (His 必勝 headband belongs to his former human self only - never draw it on the cat.)",
       "must": [
         "年輕虎斑貓、大琥珀眼露虎牙",
+        "短毛、身形比小鳥不啾小一號(沒有蓬鬆圍領、沒有耳簇毛)",
         "銀色板甲加皮帶扣",
         "紅圍巾披風"
       ],
-      "must_not": ["頭帶或任何帽子(必勝頭帶是他前世限定,貓形頭上是空的)"]
+      "must_not": [
+        "頭帶或任何帽子(必勝頭帶是他前世限定,貓形頭上是空的)",
+        "圓框眼鏡(那是小鳥不啾的,五隻裡只有她戴眼鏡)",
+        "長毛、蓬鬆圍領(那是緬因貓小鳥不啾的特徵,兩隻都是褐虎斑,毛長是唯一分得開的地方)"
+      ]
     },
     "uncle": {
       "name": "中年攻城屍",
@@ -49,7 +58,10 @@
       "ref": "story/refs/leo.webp",
       "desc": "ROGUE CAT model sheet",
       "sheet": "ROGUE CAT: orange tabby. Black hooded cloak covered in gold paw-print buckles. Brown eyes, sly smirk.",
-      "must": ["橘虎斑貓、褐眼賊笑", "黑色連帽斗篷上滿是金色肉球扣"],
+      "must": [
+        "橘虎斑貓、褐眼賊笑",
+        "黑色連帽斗篷上滿是金色肉球扣"
+      ],
       "must_not": []
     },
     "kojiro": {
@@ -78,7 +90,9 @@
         "中年攻城屍前世:壯碩中年、黑短髮有鬍碴、黑T、粗金鍊、環胸(不是胖子也不是光頭)",
         "里歐前世:淺金髮、黑襯衫、拿冒煙的咖啡杯"
       ],
-      "must_not": ["彩色(前世永遠是黑白灰階配霓虹藍光)"]
+      "must_not": [
+        "彩色(前世永遠是黑白灰階配霓虹藍光)"
+      ]
     }
   },
   "world": {

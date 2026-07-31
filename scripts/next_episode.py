@@ -2,8 +2,10 @@
 """自動產出下一話:讀 canon 與許願 → LLM 出企劃 → 驗企劃 → 出圖 → 落檔。
 
 設計在 docs/superpowers/specs/2026-07-31-auto-episode-pipeline-design.md。
-唯一的 pip 相依是 `opencc-python-reimplemented`(驗簡繁用),其餘一律標準
-函式庫——build.py 仍是純 stdlib,這裡是整條 pipeline 例外的那一個套件。
+只有兩個 pip 相依:`opencc-python-reimplemented`(驗簡繁)與 `pillow`
+(落檔重壓 webp——服務端回的是近無損檔,一頁 3.7 MB,不壓一話就 23 MB,
+而這個站是 PWA,圖全部會被 precache)。其餘一律標準函式庫,build.py 仍是
+純 stdlib。
 
 跑法:
   python3 scripts/next_episode.py --dry-run          只出企劃並驗證,不出圖不落檔
@@ -635,6 +637,28 @@ def pr_body(plan, n, wishes, wish_err=None, branch=None):
     return "\n".join(out)
 
 
+WEBP_QUALITY = 95
+
+
+def save_image(raw, out):
+    """把服務端回來的位元組重新壓成 webp 再落檔。
+
+    服務端回的是接近無損的 webp,一頁 3.7 MB。第一次真跑的第三話因此是
+    23 MB,而手工做的第一話 3.5 MB、第二話 4.7 MB——五倍重。q95 重壓後
+    一頁 0.88 MB,平均像素差 2.5/255,放大看對白仍然銳利。
+
+    這個站是 PWA,全部圖檔都會被 precache,`sw.js` 的 ASSET 版號一 bump,
+    回訪讀者就整包重抓。一話 23 MB 跟一話 5 MB 是完全不同的體驗,而且
+    每加一話就疊上去一次。
+    """
+    if out.suffix.lower() != '.webp':
+        out.write_bytes(raw)
+        return
+    import io
+    from PIL import Image
+    Image.open(io.BytesIO(raw)).convert('RGB').save(out, 'WEBP', quality=WEBP_QUALITY)
+
+
 def generate_image(name, keys, body, out):
     """打 .11 的 codex-image-service,把圖存到 out。"""
     key = os.environ.get('CODEX_IMAGE_KEY', '')
@@ -682,29 +706,51 @@ def generate_image(name, keys, body, out):
     if url.startswith('/'):
         url = IMG_BASE + url
     out.parent.mkdir(parents=True, exist_ok=True)
-    with urllib.request.urlopen(url, timeout=300) as r, out.open('wb') as w:
-        w.write(r.read())
-    print(f'  -> {name} ok {int(time.time() - t0)}s', flush=True)
+    with urllib.request.urlopen(url, timeout=300) as r:
+        save_image(r.read(), out)
+    print(f'  -> {name} ok {int(time.time() - t0)}s '
+          f'{out.stat().st_size / 1e6:.2f}MB', flush=True)
 
 
 IMG_RETRIES = 3
 
 
-def cover_body(plan):
-    """封面的畫面描述。刻意不把標題烤進圖裡——文字進了圖,改一個字就是整張重生。
+SERIES_TITLE = '轉生成貓貓的我們'
 
-    標題會出現在網頁上,不需要也不應該畫在封面裡。開頭那句反指令是要壓掉
-    prompt.BASE 寫死的「THREE horizontal panels」——封面是單張圖,而 body
-    排在整份 prompt 最後面,才蓋得掉前面的分鏡指令。
+
+def cover_body(plan, n):
+    """封面的畫面描述,含標題、角色名牌與底部話數帶。
+
+    pipeline 一開始刻意讓封面完全無字,理由是「文字烤進圖裡,改一個字就是整張
+    重生」。那個理由本身沒錯,但它沒看既有封面長什麼樣——第一、二話的標題就是
+    AI 畫進去的(story/README.md 有一整段在講外稿封面的錯字怎麼修,會有錯字正
+    代表那些字是模型畫的),結果第三話變成整個系列裡唯一沒標題的封面。所以改回
+    烤字,並把第二話封面當參考圖鎖版面。
+
+    代價要認:中文字可能出錯,每次改字要整張重生,出稿後必須逐字校對。錯字的
+    修法在 story/README.md——像素級補字之後還要再丟回去重繪一次。
+
+    開頭那句反指令是要壓掉 prompt.BASE 寫死的「THREE horizontal panels」——
+    封面是單張圖,而 body 排在整份 prompt 最後面,才蓋得掉前面的分鏡指令。
     """
     beats = '; '.join(plan.get('beats') or [])
-    return (f"A single dramatic cover illustration, NOT a multi-panel page, "
-            f"and with NO text, NO letters, NO title, NO watermark anywhere in the image.\n"
+    tags = '、'.join(f'「{v}」' for v in NAME.values())
+    band = f"第{_zh(n)}話：{plan.get('title', '')}"
+    return (f"A single dramatic cover illustration, NOT a multi-panel page.\n"
             f"All five cats together in one heroic group composition: the MAGE CAT, "
             f"the SWORDSMAN CAT, the SAMURAI CAT, the ROGUE CAT, and looming behind them "
             f"the DEMON KING CAT.\n"
             f"The mood and setting come from this episode: {plan.get('desc', '')}\n"
             f"Key moments of the episode, use them to choose the setting and lighting: {beats}\n"
+            f"LAYOUT AND LETTERING - copy the layout of reference image 2 exactly:\n"
+            f"- The series title 「{SERIES_TITLE}」 across the upper half in two lines, "
+            f"large chunky hand-drawn Chinese display type, thick gold outline, dark drop "
+            f"shadow, the two characters 貓貓 in bright pink and the rest in near-black, "
+            f"with a few small paw-print marks tucked around the letters.\n"
+            f"- One small dark rounded name tag beside each cat, each with a little paw icon "
+            f"and that cat's name: {tags}. Put each tag next to the cat it names.\n"
+            f"- A slim band along the very bottom edge with a paw icon and the text "
+            f"「{band}」.\n"
             f"Portrait aspect ratio 2:3, same painterly vibrant anime fantasy style as "
             f"reference image 1.")
 
@@ -719,7 +765,7 @@ def cover_refs(plan):
     上限一樣是 MAX_REFS。角色排最後,因為封面本來就要五位全到,萬一道具多
     到擠掉角色,那是企劃該收斂,不是這裡該偷偷丟掉鎖。
     """
-    keys = ['style']
+    keys = ['style', 'cover_style']
     for pg in plan.get('pages') or []:
         for w in pg.get('world') or []:
             if w in prompt.WORLD_KEYS and w not in keys:
@@ -830,7 +876,7 @@ def main(argv=None):
     if not a.skip_images:
         # 社群投稿的封面永遠優先:已經有檔案就不要蓋掉
         if not cover_path.is_file():
-            generate_with_retry('cover', cover_refs(plan), cover_body(plan), cover_path)
+            generate_with_retry('cover', cover_refs(plan), cover_body(plan, n), cover_path)
         else:
             print('封面已存在,跳過(社群投稿優先)')
         for pg in plan['pages']:
