@@ -38,17 +38,24 @@
 ## 結構
 
 ```
-episodes.json         單一事實來源:話數、頁次、alt、掛名、角色清單
-build.py              產生 ep*.html、首頁話數列表、sitemap.xml、sw.js 快取清單
 index.html            首頁(最新一話、話數列表、角色、誕生故事)
-ep*.html              各話閱讀頁(產生檔,別手改)
-char-*.html           角色介紹頁(手寫)
-partials/footer.html  各頁共用的 footer 與推廣三件套
+episodes.json         單一事實來源:話數、頁次、alt、掛名、角色清單
+build.py              產生 ep/*.html、首頁話數列表、sitemap.xml、sw.js 快取清單
+style.css app.js      全站樣式與行動版行為
+manifest.json sw.js   PWA:可安裝、離線閱讀(SHELL/ASSET 兩層快取)
+ep/N.html             各話閱讀頁(產生檔,別手改)
+char/<slug>.html      角色介紹頁(手寫)
+assets/               icon、favicon、og 圖
 images/epN/           第 N 話的漫畫頁(webp,對白已在圖裡)
 images/char-*.webp    角色對照圖
+partials/footer.html  各頁共用的 footer 與推廣三件套
 story/                分鏡與創作規範 → 見 story/README.md
-manifest.json sw.js   PWA:可安裝、離線閱讀(SHELL/ASSET 兩層快取)
+scripts/              驗收腳本
+docs/superpowers/     設計與實作計劃
 ```
+
+`sw.js`、`manifest.json`、`robots.txt`、`sitemap.xml`、`index.html` 必須留在根目錄——
+service worker 的 scope 與各自的慣例都要求如此。
 
 ## 新增一話
 
