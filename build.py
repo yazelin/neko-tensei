@@ -31,39 +31,39 @@ HEAD = """<!doctype html><html lang="zh-Hant-TW"><head><meta charset="utf-8">
 <meta property="og:title" content="{h1}｜{site}">
 <meta property="og:description" content="{desc}">
 <meta property="og:url" content="{url}">
-<meta property="og:image" content="{base}og.jpg">
+<meta property="og:image" content="{base}assets/og.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="{h1}｜{site}">
 <meta name="twitter:description" content="{desc}">
-<meta name="twitter:image" content="{base}og.jpg">
-<link rel="manifest" href="manifest.json">
+<meta name="twitter:image" content="{base}assets/og.jpg">
+<link rel="manifest" href="../manifest.json">
 <meta name="theme-color" content="#12141d">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="貓貓轉生">
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
-<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
-<link rel="apple-touch-icon" href="icon-180.png">
-<link rel="stylesheet" href="style.css">
-<script src="app.js" defer></script>
+<link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="../assets/icon-192.png">
+<link rel="apple-touch-icon" href="../assets/icon-180.png">
+<link rel="stylesheet" href="../style.css">
+<script src="../app.js" defer></script>
 <script type="application/ld+json">
 {{"@context":"https://schema.org","@type":"ComicIssue","issueNumber":{n},
 "name":"{h1}","inLanguage":"zh-Hant-TW",
 "author":{{"@type":"Person","name":"林亞澤"}},
 "isPartOf":{{"@type":"ComicSeries","name":"{site}","url":"{base}"}},
 "url":"{url}",
-"image":"{base}og.jpg"}}
+"image":"{base}assets/og.jpg"}}
 </script>
 </head><body data-ep="{n}">
 
 <nav class="reader-top">
-  <a class="back" href="./" aria-label="回首頁">‹</a>
+  <a class="back" href="../" aria-label="回首頁">‹</a>
   <span class="ttl">{h1}</span>
-  <a class="chars" href="./#characters" aria-label="角色"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-4 0-8 2-8 5v1h16v-1c0-3-4-5-8-5z"/></svg></a>
-  <a class="eps" href="./#episodes" aria-label="話數">☰</a>
+  <a class="chars" href="../#characters" aria-label="角色"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-4 0-8 2-8 5v1h16v-1c0-3-4-5-8-5z"/></svg></a>
+  <a class="eps" href="../#episodes" aria-label="話數">☰</a>
 </nav>
 
 <main class="reader">
@@ -79,20 +79,20 @@ def zh(n):
 
 def build_episode(ep, prev, nxt):
     h1 = f"第{zh(ep['n'])}話：{ep['title']}"
-    url = f"{BASE}ep{ep['n']}.html"
+    url = f"{BASE}ep/{ep["n"]}.html"
     out = [HEAD.format(h1=h1, site=SITE, desc=ep['desc'], series=SITE,
                        url=url, base=BASE, n=ep['n'])]
     for i, p in enumerate(ep['pages']):
         extra = ' fetchpriority="high"' if i == 0 else ' loading="lazy"'
-        out.append(f'  <img id="p{i}" src="images/ep{ep["n"]}/{p["f"]}"\n'
+        out.append(f'  <img id="p{i}" src="../images/ep{ep["n"]}/{p["f"]}"\n'
                    f'       width="1024" height="1536"{extra}\n'
                    f'       alt="{p["alt"]}">\n')
     out.append('  <p class="credit">%s</p>\n' % ep['credit'])
-    out.append('  <nav class="reader-nav">\n    <a class="btn ghost" href="./">回首頁</a>\n')
+    out.append('  <nav class="reader-nav">\n    <a class="btn ghost" href="../">回首頁</a>\n')
     if prev:
-        out.append(f'    <a class="btn ghost" href="ep{prev["n"]}.html">上一話</a>\n')
+        out.append(f'    <a class="btn ghost" href="{prev["n"]}.html">上一話</a>\n')
     if nxt:
-        out.append(f'    <a class="btn" href="ep{nxt["n"]}.html">下一話：{nxt["title"]}</a>\n')
+        out.append(f'    <a class="btn" href="{nxt["n"]}.html">下一話：{nxt["title"]}</a>\n')
     else:
         out.append(f'    <span class="btn ghost" aria-disabled="true" style="opacity:.45">'
                    f'第{zh(ep["n"] + 1)}話 未完待續……</span>\n')
@@ -103,7 +103,7 @@ def build_episode(ep, prev, nxt):
     out.append(f'<div class="progress" aria-hidden="true"><i></i>'
                f'<span>1/{len(ep["pages"])}</span></div>\n\n')
     out.append(FOOTER)
-    (ROOT / f'ep{ep["n"]}.html').write_text(''.join(out), 'utf-8')
+    (ROOT / 'ep' / f'{ep["n"]}.html').write_text(''.join(out), 'utf-8')
 
 
 def splice(path, key, body):
@@ -124,7 +124,7 @@ def main():
     # 首頁話數列表(最新的排上面)
     rows = []
     for ep in reversed(EPS):
-        rows.append(f'      <li><a href="ep{ep["n"]}.html"><span class="no">第{zh(ep["n"])}話</span>'
+        rows.append(f'      <li><a href="ep/{ep["n"]}.html"><span class="no">第{zh(ep["n"])}話</span>'
                     f'<span>{ep["title"]}</span><small>{ep["date"]}</small></a></li>')
     rows.append(f'      <li><div class="soon"><span class="no">第{zh(EPS[-1]["n"] + 1)}話</span>'
                 f'<span>那座黑塔上的魔法陣，又是誰點亮的？</span></div></li>')
@@ -133,25 +133,25 @@ def main():
     # 首頁大圖固定放第一話——這是連載,新讀者的門口是第一話,不是最新一話。
     # 最新一話當輔助入口放在按鈕列,避免大圖直接劇透後面的劇情。
     first, last = EPS[0], EPS[-1]
-    hero = (f'      <a class="cover" href="ep{first["n"]}.html" aria-label="開始閱讀第{zh(first["n"])}話">\n'
+    hero = (f'      <a class="cover" href="ep/{first["n"]}.html" aria-label="開始閱讀第{zh(first["n"])}話">\n'
             f'        <img src="images/ep{first["n"]}/{first["pages"][0]["f"]}" width="1024" height="1536"\n'
             f'             alt="{first["pages"][0]["alt"]}" fetchpriority="high">\n'
             f'      </a>\n'
             f'      <div>\n'
-            f'        <a class="btn" href="ep{first["n"]}.html">開始閱讀 第{zh(first["n"])}話</a>\n'
+            f'        <a class="btn" href="ep/{first["n"]}.html">開始閱讀 第{zh(first["n"])}話</a>\n'
             f'        <button class="btn ghost" id="inst" type="button">安裝到手機</button>\n'
             f'      </div>')
     if last is not first:
         hero += (f'\n      <p class="newest">最新：'
-                 f'<a href="ep{last["n"]}.html">第{zh(last["n"])}話 {last["title"]}</a></p>')
+                 f'<a href="ep/{last["n"]}.html">第{zh(last["n"])}話 {last["title"]}</a></p>')
     splice('index.html', 'latest', hero)
 
     # sitemap
     urls = [f'  <url><loc>{BASE}</loc><lastmod>{EPS[-1]["date"]}</lastmod></url>']
     for ep in EPS:
-        urls.append(f'  <url><loc>{BASE}ep{ep["n"]}.html</loc><lastmod>{ep["date"]}</lastmod></url>')
+        urls.append(f'  <url><loc>{BASE}ep/{ep["n"]}.html</loc><lastmod>{ep["date"]}</lastmod></url>')
     for c in CFG['characters']:
-        urls.append(f'  <url><loc>{BASE}char-{c["slug"]}.html</loc>'
+        urls.append(f'  <url><loc>{BASE}char/{c["slug"]}.html</loc>'
                     f'<lastmod>{EPS[-1]["date"]}</lastmod></url>')
     (ROOT / 'sitemap.xml').write_text(
         '<?xml version="1.0" encoding="UTF-8"?>\n'
@@ -160,10 +160,10 @@ def main():
 
     # sw.js:殼與暖快取清單
     shell = ["  './', './index.html',"]
-    shell.append('  ' + ' '.join(f"'./ep{e['n']}.html'," for e in EPS))
-    shell.append('  ' + ' '.join(f"'./char-{c['slug']}.html'," for c in CFG['characters']))
+    shell.append('  ' + ' '.join(f"'./ep/{e['n']}.html'," for e in EPS))
+    shell.append('  ' + ' '.join(f"'./char/{c['slug']}.html'," for c in CFG['characters']))
     shell.append("  './style.css', './app.js', './manifest.json',")
-    shell.append("  './icon-192.png', './icon-180.png', './favicon-32.png'")
+    shell.append("  './assets/icon-192.png', './assets/icon-180.png', './assets/favicon-32.png'")
     splice('sw.js', 'shell', '\n'.join(shell))
 
     warm = []
@@ -171,7 +171,7 @@ def main():
         for p in ep['pages']:
             warm.append(f"./images/ep{ep['n']}/{p['f']}")
     warm += [f"./images/char-{c['slug']}.webp" for c in CFG['characters']]
-    warm += ['./icon-512.png', './og.jpg']
+    warm += ['./assets/icon-512.png', './assets/og.jpg']
     lines, cur = [], '  '
     for u in warm:
         item = f"'{u}', "
