@@ -10,6 +10,7 @@
       "name": "小鳥不啾",
       "ref": "story/refs/xiaoniao.webp",
       "desc": "MAGE CAT model sheet",
+      "sheet": "MAGE CAT: long-haired brown-grey Maine Coon. Round thin gold-rimmed glasses, ALWAYS clearly visible on her face. Deep blue robe with gold trim. Tall golden staff topped with a large blue orb. Amber eyes. TWO SMALL BIRDS ARE ALWAYS WITH HER: one plump songbird perched on the head of her staff, and one tiny chick perched on the upper-left of her head like a hair clip. Their species, colour and accessories may differ from panel to panel - birds simply come to her; that is why she is called 小鳥不啾. Neither bird ever opens its beak.",
       "must": [
         "長毛褐灰緬因貓、琥珀眼",
         "圓形細金框眼鏡,臉上一定看得到",
@@ -23,6 +24,7 @@
       "name": "小白++",
       "ref": "story/refs/xiaobai.webp",
       "desc": "SWORDSMAN CAT model sheet",
+      "sheet": "SWORDSMAN CAT: young brown tabby. Silver plate armour with leather straps and buckles, a red scarf-cape, bare head with NO headband and NO hat of any kind. Big amber eyes, fangs showing, energetic. (His 必勝 headband belongs to his former human self only - never draw it on the cat.)",
       "must": [
         "年輕虎斑貓、大琥珀眼露虎牙",
         "銀色板甲加皮帶扣",
@@ -34,6 +36,7 @@
       "name": "中年攻城屍",
       "ref": "story/refs/uncle.webp",
       "desc": "SAMURAI CAT model sheet",
+      "sheet": "SAMURAI CAT: white tiger-striped cat. Dark navy lacquered samurai armour, red cord sash, and a round gold medallion hanging on his chest with the single Chinese character 貓 engraved on it. Blue eyes, stern middle-aged look.",
       "must": [
         "白虎斑貓、藍眼、中年臉",
         "深藍漆武士鎧、紅繩腰帶",
@@ -45,6 +48,7 @@
       "name": "里歐",
       "ref": "story/refs/leo.webp",
       "desc": "ROGUE CAT model sheet",
+      "sheet": "ROGUE CAT: orange tabby. Black hooded cloak covered in gold paw-print buckles. Brown eyes, sly smirk.",
       "must": ["橘虎斑貓、褐眼賊笑", "黑色連帽斗篷上滿是金色肉球扣"],
       "must_not": []
     },
@@ -52,17 +56,22 @@
       "name": "荒坂小次郎",
       "ref": "story/refs/kojiro.webp",
       "desc": "DEMON KING CAT model sheet",
+      "sheet": "DEMON KING CAT: enormous dark chocolate-brown long-haired cat. Glowing red eyes, black-and-crimson cape, heavy gold chain across the chest, and on that chain a round medallion crest: a thick GOLD rim, a BLACK face, and centred on it a flat solid RED emblem made of one straight vertical stem with a round ball on top plus one short branch to the left and one to the right, each ending in a round ball - three round balls in total. The emblem is a flat red silhouette; it is NOT a detailed tree and it carries NO paw print.",
       "must": [
         "巨大暗棕色長毛貓、發光紅眼",
         "黑紅披風、粗金鎖鍊",
-        "圓形紅色紋章(樹在爪上)"
+        "胸前圓形紋章:金色厚框、黑底,中央紅色三球剪影(直莖頂一球、左右短枝各一球)"
       ],
-      "must_not": ["雲朵狀的內心 OS 思考框(他沒有前世可以浮出來)"]
+      "must_not": [
+        "雲朵狀的內心 OS 思考框(他沒有前世可以浮出來)",
+        "紋章畫成寫實樹木、樹冠枝椏,或帶肉球印"
+      ]
     },
     "past": {
       "name": "四位主角的前世人形",
       "ref": "story/refs/past-four.webp",
       "desc": "model sheet of the four heroes FORMER HUMAN SELVES, left to right: mage / swordsman / samurai / rogue",
+      "sheet": "",
       "must": [
         "小鳥不啾前世:黑長髮低馬尾、圓眼鏡、左耳上方一枚白色小鳥髮夾、掛識別證",
         "小白++前世:黑色刺蝟頭、白頭帶上兩個紅色「必勝」、連帽衫、張嘴吼叫爆汗",
@@ -70,6 +79,25 @@
         "里歐前世:淺金髮、黑襯衫、拿冒煙的咖啡杯"
       ],
       "must_not": ["彩色(前世永遠是黑白灰階配霓虹藍光)"]
+    }
+  },
+  "world": {
+    "pass": {
+      "name": "通行證",
+      "ref": "story/refs/pass.webp",
+      "desc": "THE PASS prop reference",
+      "sheet": "THE PASS: the round flat medallion the DEMON KING CAT tossed to the heroes at the end of episode 2. A BLACK disc face with a thin RED rim around its edge. Centred on it, a flat solid RED emblem made of one straight vertical stem with a round ball on top plus one short branch to the left and one to the right, each ending in a round ball - three round balls in total. It is the same red emblem the DEMON KING CAT wears on his chest, but the pass has a RED rim, not a gold one. It hangs from NO cord, NO strap, NO ring and NO chain. It is NOT gold, NOT a detailed tree, and carries NO paw print. Roughly the size of a cat's palm.",
+      "must": [
+        "圓形扁平圓盤,黑底、紅色細外環",
+        "中央紅色三球剪影(直莖頂一球、左右短枝各一球)",
+        "大約一個貓掌大,單手托得住"
+      ],
+      "must_not": [
+        "掛繩、皮帶、吊環或鎖鍊",
+        "金色外框(金框是小次郎胸章,通行證是紅框)",
+        "寫實樹木、樹冠枝椏",
+        "肉球印"
+      ]
     }
   },
   "global_rules": [
