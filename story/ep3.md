@@ -94,21 +94,21 @@ PANEL 3 (bottom): Close-up on MAGE CAT examining the side of the stone pedestal,
 
 | 格 | 畫面 | 對白 | 框型 |
 |---|---|---|---|
-| top | MAGE CAT bites the thick glowing magic cable with her cat teeth and violently pulls it out from the stone pedestal socket. | 小鳥不啾「遇到死機，拔掉重插！」 | SHOUT |
+| top | MAGE CAT grips the thick glowing magic cable in her free paw and yanks it straight out of the stone pedestal socket, her staff still held in her other paw, her face completely deadpan behind her glasses. | 小鳥不啾「遇到死機，拔掉重插！」 | SHOUT |
 | mid | The entire sky goes completely black for a split second; all four cats are frozen in pitch black darkness, eight cat eyes blinking wide. | 小白++「關、關掉了？！」 | TREMBLE |
 |  |  | 中年攻城屍「救命，老夫看不見了！」 | WEAK |
-| bottom | MAGE CAT kicks the cable back into the socket with her hind leg; golden sparks explode from the connection. | 小鳥不啾「再等五秒讓它重新開機。」 | OVAL |
+| bottom | MAGE CAT pushes the same cable firmly back into the socket with her paw; golden sparks burst out of the connection. | 小鳥不啾「再等五秒讓它重新開機。」 | OVAL |
 |  |  | 里歐「暴力重啟也太熟練了吧……」 | WEAK |
 
 參考圖：style、xiaobai、uncle、xiaoniao、leo
 
 ```
-PANEL 1 (top): MAGE CAT bites the thick glowing magic cable with her cat teeth and violently pulls it out from the stone pedestal socket.
+PANEL 1 (top): MAGE CAT grips the thick glowing magic cable in her free paw and yanks it straight out of the stone pedestal socket, her staff still held in her other paw, her face completely deadpan behind her glasses.
   SHOUT BALLOON from xiaoniao: 遇到死機，拔掉重插！
 PANEL 2 (middle): The entire sky goes completely black for a split second; all four cats are frozen in pitch black darkness, eight cat eyes blinking wide.
   TREMBLE BALLOON from xiaobai: 關、關掉了？！
   WEAK BALLOON from uncle: 救命，老夫看不見了！
-PANEL 3 (bottom): MAGE CAT kicks the cable back into the socket with her hind leg; golden sparks explode from the connection.
+PANEL 3 (bottom): MAGE CAT pushes the same cable firmly back into the socket with her paw; golden sparks burst out of the connection.
   OVAL BALLOON from xiaoniao: 再等五秒讓它重新開機。
   WEAK BALLOON from leo: 暴力重啟也太熟練了吧……
 ```
