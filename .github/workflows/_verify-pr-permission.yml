@@ -1,0 +1,26 @@
+name: 驗 PR 權限（用完就刪）
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 幫 auto/ep3 開 PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr create --base main --head auto/ep3 \
+            --title "第 3 話草稿——待你看過再 merge" \
+            --body "自動連載 pipeline 第一次真跑的產物（run 30620166460，36 分 15 秒，封面加六頁全部出圖成功）。
+
+**這一話的通行證是漂掉的版本**——它是在道具鎖修好之前產出的，留著當對照組，不要 merge。
+
+驗證這條 PR 是由 GitHub Actions 開的，用來確認 repo 設定 \`can_approve_pull_request_reviews\` 打開之後，workflow 真的開得了 PR。" \
+            --label auto-episode
