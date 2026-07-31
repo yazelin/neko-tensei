@@ -1,0 +1,85 @@
+name: 下一話
+
+# cron 先不開。等人工用 workflow_dispatch 跑過一次、確認 PR 的樣子與
+# 手機可讀性之後,再由 yazelin 把下面三行的註解拿掉。
+on:
+  # schedule:
+  #   - cron: '0 14 * * 5'   # 每週五 台北 22:00
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  discussions: read
+
+concurrency:
+  group: next-episode
+  cancel-in-progress: false
+
+jobs:
+  draft:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 裝相依（整條線唯一的 pip 套件）
+        run: pip install --quiet opencc-python-reimplemented
+
+      - name: 確認沒有還開著的草稿 PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          open=$(gh pr list --label auto-episode --state open --json number --jq 'length')
+          if [ "$open" != "0" ]; then
+            echo "::error::已經有 $open 個開著的 auto-episode PR,先處理完再產下一話"
+            exit 1
+          fi
+
+      - name: 確認 secrets 齊全
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          CODEX_IMAGE_KEY: ${{ secrets.CODEX_IMAGE_KEY }}
+        run: |
+          miss=0
+          [ -z "$GEMINI_API_KEY" ]  && { echo "::error::缺 GEMINI_API_KEY";  miss=1; }
+          [ -z "$CODEX_IMAGE_KEY" ] && { echo "::error::缺 CODEX_IMAGE_KEY"; miss=1; }
+          exit $miss
+
+      - name: 產出下一話
+        id: gen
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_WEB_BASE_URL: ${{ secrets.GEMINI_WEB_BASE_URL }}
+          CODEX_IMAGE_KEY: ${{ secrets.CODEX_IMAGE_KEY }}
+          CODEX_IMAGE_BASE_URL: ${{ secrets.CODEX_IMAGE_BASE_URL }}
+        run: python3 scripts/next_episode.py
+
+      - name: 開 PR
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          N=$(python3 -c "import json;print(json.load(open('episodes.json'))['episodes'][-1]['n'])")
+          BR="auto/ep$N"
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BR"
+          git add -A
+          git rm --cached ".pr-body-ep$N.md" >/dev/null 2>&1 || true
+          git commit -m "feat: 第 $N 話草稿(自動產出,待人工確認)"
+          git push -u origin "$BR"
+          gh pr create --base main --head "$BR" \
+            --title "第 $N 話草稿——待你看過再 merge" \
+            --body-file ".pr-body-ep$N.md" \
+            --label auto-episode
+
+      - name: 失敗就開 issue
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue create --label auto-episode \
+            --title "自動產出下一話失敗（$(date -u +%Y-%m-%d)）" \
+            --body "跑失敗了，沒有留下半成品 PR。記錄在 ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"

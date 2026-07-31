@@ -29,14 +29,44 @@
 
 **你的生圖工具必須支援多張參考圖的 image-edit。** 純文字生圖（text-to-image）用不了這套方法，你只會看到角色繼續漂、找不出原因。
 
+用 **Codex CLI** 的話你已經有了——內建的 `$imagegen` 支援 `--image` 多參考圖，不用另外裝東西：
+
+```bash
+codex exec -s workspace-write --skip-git-repo-check \
+  --image <畫風錨> --image <角色設定圖1> --image <角色設定圖2> \
+  -- '$imagegen <你的 prompt>'
+```
+
+Codex 也會自動讀這個 repo 的 [`AGENTS.md`](AGENTS.md)，所以規則它看得到。
+
 ### 裝技能
+
+**最簡單的方式：不用裝。** 這兩支腳本是純 Python 3 標準函式庫，clone 下來直接跑就好：
 
 ```bash
 git clone https://github.com/yazelin/cast-lock-skill ~/cast-lock-skill
-ln -s ~/cast-lock-skill ~/.claude/skills/cast-lock
+python3 ~/cast-lock-skill/build.py --help
 ```
 
-Windows 用 `python` 不是 `python3`，symlink 需要管理員權限，直接 clone 到 `%USERPROFILE%\.claude\skills\cast-lock` 比較省事。
+（Windows 用 `python` 不是 `python3`——`python3` 會觸發 Microsoft Store 轉址。）
+
+只有在你想讓 AI agent **自動認得**這個技能時才需要下面這步：
+
+```bash
+# Claude Code
+mkdir -p ~/.claude/skills && ln -s ~/cast-lock-skill ~/.claude/skills/cast-lock
+
+# Codex CLI
+mkdir -p ~/.codex/skills && ln -s ~/cast-lock-skill ~/.codex/skills/cast-lock
+```
+
+其他 agent：直接叫它讀 `~/cast-lock-skill/SKILL.md` 照著做即可。技能本體是一份 md 加兩支腳本，不綁任何特定工具。
+
+Windows 的 symlink 需要管理員或開發人員模式，比較省事的做法是直接 clone 到技能目錄底下：
+
+```powershell
+git clone https://github.com/yazelin/cast-lock-skill "$env:USERPROFILE\.claude\skills\cast-lock"
+```
 
 ---
 
