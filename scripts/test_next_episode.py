@@ -106,6 +106,40 @@ class TestPrompt(unittest.TestCase):
             'SHOUT', 'OVAL', 'WEAK', 'TREMBLE', 'THOUGHT', 'DEMON', 'CAPTION'})
 
 
+class TestDate(unittest.TestCase):
+    """話數日期要用台灣時間。
+
+    第四話的落檔跑在 2026-07-31T17:12Z,台灣已經是 8/1 凌晨,但
+    datetime.date.today() 在 runner 上(系統時區 UTC)給的是 7/31。那個日期
+    會印在首頁的話數列表,也會進 sitemap 的 lastmod——讀者在台灣。
+    """
+
+    def test_跨日那幾個小時要給台灣的日期(self):
+        # UTC 的 7/31 16:00 = 台北 8/1 00:00,是最容易出錯的那一刻
+        import datetime as dt
+        fake_utc = dt.datetime(2026, 7, 31, 16, 30, tzinfo=dt.timezone.utc)
+
+        class _FixedDatetime(dt.datetime):
+            @classmethod
+            def now(cls, tz=None):
+                return fake_utc.astimezone(tz) if tz else fake_utc
+
+        with patch.object(ne.datetime, 'datetime', _FixedDatetime):
+            self.assertEqual(ne.today_tw(), '2026-08-01')
+
+    def test_一般時段兩邊同一天(self):
+        import datetime as dt
+        fake_utc = dt.datetime(2026, 7, 31, 3, 0, tzinfo=dt.timezone.utc)
+
+        class _FixedDatetime(dt.datetime):
+            @classmethod
+            def now(cls, tz=None):
+                return fake_utc.astimezone(tz) if tz else fake_utc
+
+        with patch.object(ne.datetime, 'datetime', _FixedDatetime):
+            self.assertEqual(ne.today_tw(), '2026-07-31')
+
+
 class TestSaveImage(unittest.TestCase):
     """落檔要重新壓縮。
 

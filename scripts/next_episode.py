@@ -23,6 +23,7 @@ import subprocess
 import sys
 import time
 import urllib.request
+import zoneinfo
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 import prompt
@@ -817,13 +818,29 @@ def plan_with_retry(canon, wishes, titles, n):
     raise RuntimeError('企劃連兩次都沒過驗證:' + '；'.join(errs))
 
 
+TW = zoneinfo.ZoneInfo('Asia/Taipei')
+
+
+def today_tw():
+    """台灣的今天。**不要用 datetime.date.today()**。
+
+    這條線跑在 GitHub runner 上,系統時區是 UTC。第四話的落檔跑在
+    2026-07-31T17:12Z,台灣時間已經是 8/1 凌晨,但 date.today() 給的是 7/31——
+    這個日期會印在首頁的話數列表,也會進 sitemap 的 lastmod。讀者在台灣,
+    日期就該是台灣的。
+
+    zoneinfo 是標準函式庫,不算新增相依。
+    """
+    return datetime.datetime.now(TW).date().isoformat()
+
+
 def publish(plan, n, has_cover):
     """落檔:圖已經在 images/epN/ 了,這裡處理分鏡、episodes.json 與 build。"""
     (ROOT / 'story' / f'ep{n}.md').write_text(render_storyboard(plan, n), 'utf-8')
 
     cfg_path = ROOT / 'episodes.json'
     cfg = json.loads(cfg_path.read_text('utf-8'))
-    date = datetime.date.today().isoformat()
+    date = today_tw()
     cfg['episodes'].append(episode_entry(plan, n, date, has_cover))
     cfg_path.write_text(json.dumps(cfg, ensure_ascii=False, indent=2) + '\n', 'utf-8')
 
