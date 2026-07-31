@@ -10,6 +10,28 @@ import unittest
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 
 import prompt
+import next_episode as ne
+
+
+class TestCanon(unittest.TestCase):
+    def test_下一話話數接在最後一話之後(self):
+        c = ne.load_canon()
+        self.assertEqual(c['next_n'], c['episodes'][-1]['n'] + 1)
+
+    def test_帶進創作規範全文(self):
+        c = ne.load_canon()
+        self.assertIn('對話框的形狀跟著劇情走', c['rules'])
+        self.assertIn('必勝', c['rules'])
+
+    def test_帶進最近兩話的分鏡(self):
+        c = ne.load_canon()
+        self.assertIn('魔力不足', c['recent'])
+        self.assertIn('得加 Token', c['recent'])
+
+    def test_話數不重複(self):
+        c = ne.load_canon()
+        ns = [e['n'] for e in c['episodes']]
+        self.assertEqual(len(ns), len(set(ns)))
 
 
 class TestPrompt(unittest.TestCase):
