@@ -59,8 +59,9 @@ listed feature; a character is wrong if any of these is missing.
 - ROGUE CAT: orange tabby. Black hooded cloak covered in gold paw-print buckles. Brown eyes, sly
   smirk.
 - DEMON KING CAT: enormous dark chocolate-brown long-haired cat. Glowing red eyes,
-  black-and-crimson cape, heavy gold chain across the chest, and a round red crest of a tree
-  above a paw.
+  black-and-crimson cape, heavy gold chain across the chest, and on that chain a round medallion
+  crest: a gold rim, a black face, and a flat red three-balled emblem (one straight stem with a
+  ball on top plus one short branch to each side, each ending in a ball).
 
 BALLOON SHAPES - each line below names its own balloon shape. Draw that exact shape; do NOT
 default every balloon to a rounded rectangle. Hand-inked manga feel, slightly irregular outlines,
@@ -179,7 +180,7 @@ practice sword. Beside him, stuck in the dirt, is an old weathered wooden signbo
 
 | 格 | 畫面 | 對白 | 框型 |
 |---|---|---|---|
-| 上 | 天空裂開，巨大紅色魔法陣展開，中心是樹與爪的紋章，四貓仰頭顯得很小 | 小鳥不啾「天空……裂開了。」 | 抖框 |
+| 上 | 天空裂開，巨大紅色魔法陣展開，中心是紅色三球紋章（直莖頂一球、左右短枝各一球），四貓仰頭顯得很小 | 小鳥不啾「天空……裂開了。」 | 抖框 |
 | 中 | 魔王從魔法陣降下：暗棕長毛、紅眼、黑紅披風、金鎖鍊、紅色紋章 | 魔王「這個世界的魔力，是我在配的。」 | 魔王框 |
 | 下 | 四貓炸毛後退，魔王俯視，露齒慢笑 | 魔王「四隻空瓶子，還敢慶祝。」 | 魔王框 |
 
@@ -187,7 +188,8 @@ practice sword. Beside him, stuck in the dirt, is an old weathered wooden signbo
 
 ```
 PANEL 1 (top): the sky splits open and an enormous crimson magic circle unfurls overhead, its
-runes glowing red, a tree-and-paw crest at its centre. The four small cats look up from below,
+runes glowing red, a flat red three-balled crest at its centre - one straight stem with a ball on
+top plus one short branch to each side, each ending in a ball. The four small cats look up from below,
 tiny against it.
   TREMBLE BALLOON from the MAGE CAT: 天空……裂開了。
 PANEL 2 (middle): the DEMON KING CAT descends out of the crimson magic circle - colossal, dark
@@ -279,8 +281,8 @@ roaring fireball. Triumphant heroic group shot.
 PANEL 1 (top): the DEMON KING CAT throws his head back laughing - not angry, genuinely delighted,
 red eyes narrowed with approval.
   DEMON BALLOON from the DEMON KING CAT: 有意思。
-PANEL 2 (middle): he tears the round red tree-and-paw crest emblem off his chest and tosses it
-down; the SWORDSMAN CAT catches it with both paws, staring at it in awe.
+PANEL 2 (middle): he tears THE PASS off his chest and tosses it down - the round black
+medallion with a thin red rim and a flat red three-balled emblem; the SWORDSMAN CAT catches it with both paws, staring at it in awe.
   DEMON BALLOON from the DEMON KING CAT: 你們是第一組看懂規則的。這個拿去。
   TREMBLE BALLOON from the SWORDSMAN CAT: 這是……通行證？
 PANEL 3 (bottom): the four cats turn and look into the distance where, atop a far taller black
@@ -300,7 +302,8 @@ dramatic sky.
 A single full-body character card portrait, NOT a multi-panel page, and with NO text of any kind
 anywhere in the image. The DEMON KING CAT alone: enormous dark chocolate-brown long-haired cat
 standing in three-quarter view, glowing red eyes, black-and-crimson cape, heavy gold chain across
-the chest, round red tree-and-paw crest emblem, claws out, a slow confident grin. Behind him a
+the chest, and on it a round medallion crest with a gold rim, a black face and a flat red
+three-balled emblem, claws out, a slow confident grin. Behind him a
 swirling crimson magic circle and a dark castle among floating islands. Same painterly vibrant
 anime fantasy style as the reference. Portrait aspect ratio 2:3.
 ```
