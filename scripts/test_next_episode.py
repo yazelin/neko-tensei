@@ -3,9 +3,12 @@
 
 跑法: python3 -m unittest discover -s scripts -p 'test_*.py' -v
 """
+import json
 import pathlib
+import subprocess
 import sys
 import unittest
+from unittest.mock import patch
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 
@@ -128,6 +131,35 @@ class TestWishes(unittest.TestCase):
              'comments': {'nodes': [{'body': '  '}, {'body': '有效的許願'}]}},
         ]}}}}
         self.assertEqual(ne.parse_wishes(payload), ['有效的許願'])
+
+    @patch('next_episode.subprocess.run')
+    def test_gh失敗時回傳失敗原因不是None(self, mock_run):
+        # gh 沒認證 / API 壞了,是真的該讓人知道的失敗,不能跟「沒人許願」
+        # 混在一起變成同一種「回空清單」。
+        mock_run.return_value = subprocess.CompletedProcess(
+            args=['gh'], returncode=1, stdout='', stderr='gh: authentication required')
+        wishes, err = ne.fetch_wishes()
+        self.assertEqual(wishes, [])
+        self.assertIsNotNone(err)
+        self.assertIn('authentication required', err)
+
+    @patch('next_episode.subprocess.run')
+    def test_gh成功但沒人許願時第二個值是None(self, mock_run):
+        # 「正常空」跟「失敗」的分界:成功打到 API、只是還沒人留言,
+        # 第二個值一定要是 None,呼叫端才不會誤判成錯誤。
+        payload = json.dumps({'data': {'repository': {'discussions': {'nodes': []}}}})
+        mock_run.return_value = subprocess.CompletedProcess(
+            args=['gh'], returncode=0, stdout=payload, stderr='')
+        wishes, err = ne.fetch_wishes()
+        self.assertEqual(wishes, [])
+        self.assertIsNone(err)
+
+    @patch('next_episode.subprocess.run')
+    def test_subprocess丟例外時回傳失敗原因不是None(self, mock_run):
+        mock_run.side_effect = FileNotFoundError('gh: command not found')
+        wishes, err = ne.fetch_wishes()
+        self.assertEqual(wishes, [])
+        self.assertIsNotNone(err)
 
 
 if __name__ == '__main__':
