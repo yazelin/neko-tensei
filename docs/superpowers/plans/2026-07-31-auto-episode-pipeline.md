@@ -1912,7 +1912,7 @@ git commit -m "feat(pipeline): GitHub Actions workflow,cron 先不開
 **Files:**
 - 不新增檔案；產出的第三話檔案只留在分支上供人檢視
 
-- [ ] **Step 1: 確認整套測試通過**
+- [x] **Step 1: 確認整套測試通過**
 
 ```bash
 cd ~/neko-tensei && python3 -m unittest discover -s scripts -p 'test_*.py' 2>&1 | tail -3
@@ -1921,7 +1921,7 @@ NODE_PATH=$(npm root -g) node scripts/verify-mobile.js 2>&1 | tail -2
 
 Expected：`OK` 與 `42/42 通過`（pipeline 不該弄壞行動版）。
 
-- [ ] **Step 2: 用 Task 8 產出的企劃跑一次不出圖的完整流程**
+- [x] **Step 2: 用 Task 8 產出的企劃跑一次不出圖的完整流程**
 
 ```bash
 cd ~/neko-tensei && python3 scripts/next_episode.py --plan-from /tmp/ep3-plan.json --skip-images 2>&1 | tail -5
@@ -1932,7 +1932,7 @@ Expected：`story/ep3.md`、`episodes.json`、`sw.js`、`ep3.html`、`index.html
 
 若企劃在 Task 9 沒通過驗證，先手寫一份合格的存成 `/tmp/ep3-plan.json` 再跑——**不要放寬驗證規則來遷就**。
 
-- [ ] **Step 3: 檢查產出的東西長得對不對**
+- [x] **Step 3: 檢查產出的東西長得對不對**
 
 ```bash
 cd ~/neko-tensei && head -30 story/ep3.md && echo "=== ep3.html 的圖 ===" && grep -c 'images/ep3/' ep3.html && echo "=== sw 版本 ===" && grep -E "^const (SHELL|ASSET)" sw.js
@@ -1940,7 +1940,7 @@ cd ~/neko-tensei && head -30 story/ep3.md && echo "=== ep3.html 的圖 ===" && g
 
 Expected：分鏡檔有標題與逐頁表格；`ep3.html` 參照 6 張圖；`SHELL`／`ASSET` 都比原本大 1。
 
-- [ ] **Step 4: 只出一張圖，驗證生圖那一段真的接得上**
+- [x] **Step 4: 只出一張圖，驗證生圖那一段真的接得上**
 
 **只出一張，不要整話跑完。** 這一步是驗接線，不是產內容。
 
@@ -1959,7 +1959,7 @@ print('產出:', out, out.stat().st_size, 'bytes')
 
 Expected：約 3–4 分鐘後印出檔案路徑與大小（3 MB 上下）。這張圖**不要**放進 repo。
 
-- [ ] **Step 5: 目視那張圖，確認 prompt 真的組對了**
+- [x] **Step 5: 目視那張圖，確認 prompt 真的組對了**
 
 用 Read 工具打開 `/tmp/ep3-p01-test.png`（先縮到 512 寬），確認：
 
@@ -1974,7 +1974,7 @@ print('預覽: /tmp/ep3-p01-preview.png')"
 
 **有任何一項不對，記進報告，不要自己改 prompt 去遷就**——那是下一輪要處理的事，這一步的目的是知道現況。
 
-- [ ] **Step 6: 把第三話的產出從分支上撤掉**
+- [x] **Step 6: 把第三話的產出從分支上撤掉**
 
 這一輪的目的是驗證 pipeline，不是發佈第三話。內容要等 yazelin 看過再決定。
 
@@ -1984,7 +1984,7 @@ cd ~/neko-tensei && git checkout -- episodes.json sw.js && rm -rf images/ep3 sto
 
 Expected：`git status --short` 只剩 pipeline 本身的檔案，沒有 `ep3` 相關的東西。
 
-- [ ] **Step 7: 確認整套測試仍然通過**
+- [x] **Step 7: 確認整套測試仍然通過**
 
 ```bash
 cd ~/neko-tensei && python3 -m unittest discover -s scripts -p 'test_*.py' 2>&1 | tail -3
@@ -1993,7 +1993,7 @@ NODE_PATH=$(npm root -g) node scripts/verify-mobile.js 2>&1 | tail -2
 
 Expected：`OK` 與 `42/42 通過`。
 
-- [ ] **Step 8: 開 PR，不要 merge**
+- [x] **Step 8: 開 PR，不要 merge**
 
 ```bash
 cd ~/neko-tensei && git push -u origin feat/auto-episode
