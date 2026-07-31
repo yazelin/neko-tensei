@@ -129,6 +129,16 @@ prompt 裡雖然寫了 portrait 2:3，但那只是「有時候會聽」，不能
 先跑 `python3 scripts/next_episode.py --plan-only /tmp/plan.json` 只出企劃不出圖，
 確認後端接通了再花出圖的錢。
 
+**在 GitHub Actions 上換後端**：金鑰放 repo 的 Secrets（`GEMINI_API_KEY`、`OPENAI_API_KEY`、
+`CODEX_IMAGE_KEY`、`GEMINI_IMAGE_KEY`），選哪個後端與模型名放 Variables（`PLANNER_PROVIDER`、
+`IMAGE_PROVIDER`、`OPENAI_BASE_URL`、`OPENAI_MODEL`、`GEMINI_IMAGE_MODEL` 等）。
+workflow 會照選到的組合檢查金鑰，只缺你真正用得到的那把才擋。
+
+```bash
+gh secret set GEMINI_IMAGE_KEY          # 貼上 AI Studio 金鑰
+gh variable set IMAGE_PROVIDER --body gemini
+```
+
 ## 授權
 
 兩份授權，分開看：
