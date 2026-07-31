@@ -9,6 +9,10 @@
     "path": "images/ep2/00-cover.webp",
     "desc": "the established cover layout: big title lockup, character name tags, bottom episode band"
   },
+  "balloon_ref": {
+    "path": "story/refs/balloons.webp",
+    "desc": "a chart of the seven balloon shapes, all drawn EMPTY, in reading order: SHOUT / OVAL / WEAK / TREMBLE (top row), THOUGHT / DEMON / CAPTION (bottom row)"
+  },
   "cast": {
     "xiaoniao": {
       "name": "小鳥不啾",

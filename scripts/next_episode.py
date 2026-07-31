@@ -510,6 +510,11 @@ def page_refs(page):
                  for ln in pn.get('lines') or [])
     if has_os and 'past' not in keys:
         keys.append('past')
+    # 框型對照圖排在畫風錨後面,但只有還有空位才放——它是手法的錨,角色設定圖
+    # 與前世灰階是內容正確性,兩者搶額度時先保內容。所以它是唯一一個「擠不下
+    # 就不放」的參考圖,而不是把別人擠掉。
+    if len(keys) < MAX_REFS:
+        keys.insert(1, 'balloons')
     return keys[:MAX_REFS]
 
 
@@ -832,6 +837,38 @@ def publish(plan, n, has_cover):
     subprocess.run(['python3', str(ROOT / 'build.py')], check=True, cwd=ROOT)
 
 
+CACHE = ROOT / '.pipeline-cache'
+
+
+def _plan_cache(n):
+    return CACHE / f'ep{n}-plan.json'
+
+
+def load_cached_plan(n):
+    """上一次沒跑完留下的企劃。沒有、或檔案壞掉,都回 None。
+
+    壞掉當作沒有而不是丟例外:上一次可能是跑到一半被砍,檔案只寫了一半。
+    那種時候該重出一份企劃,不是讓整條線倒在讀快取這一步。
+    """
+    p = _plan_cache(n)
+    if not p.is_file():
+        return None
+    try:
+        return json.loads(p.read_text('utf-8'))
+    except (json.JSONDecodeError, OSError):
+        print(f'快取的企劃讀不動,當作沒有:{p}')
+        return None
+
+
+def save_cached_plan(n, plan):
+    CACHE.mkdir(parents=True, exist_ok=True)
+    _plan_cache(n).write_text(json.dumps(plan, ensure_ascii=False, indent=2), 'utf-8')
+
+
+def clear_cached_plan(n):
+    _plan_cache(n).unlink(missing_ok=True)
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description='產出下一話')
     ap.add_argument('--dry-run', action='store_true', help='只出企劃並驗證,不出圖不落檔')
@@ -856,12 +893,18 @@ def main(argv=None):
             for e in errs:
                 print(' -', e)
             return 1
+    elif (cached := load_cached_plan(n)) and not a.plan_only:
+        # 上一次跑到一半掛掉。沿用同一份企劃,不然新劇本會配到舊圖。
+        plan = cached
+        print('沿用上次沒跑完的企劃:', plan.get('title'))
     else:
         try:
             plan = plan_with_retry(canon, wishes, titles, n)
         except RuntimeError as e:
             print(e)
             return 1
+        if not a.dry_run and not a.plan_only:
+            save_cached_plan(n, plan)
         if a.plan_only:
             pathlib.Path(a.plan_only).write_text(
                 json.dumps(plan, ensure_ascii=False, indent=2), 'utf-8')
@@ -880,12 +923,17 @@ def main(argv=None):
         else:
             print('封面已存在,跳過(社群投稿優先)')
         for pg in plan['pages']:
-            generate_with_retry(pg['n'], page_refs(pg), page_body(pg),
-                                ROOT / f'images/ep{n}' / f"{pg['n']}.webp")
+            out = ROOT / f'images/ep{n}' / f"{pg['n']}.webp"
+            if out.is_file():
+                # 上一次跑到一半留下來的。整話七張約 36 分鐘,不要從第一張重來。
+                print(f'  {pg["n"]} 已存在,跳過', flush=True)
+                continue
+            generate_with_retry(pg['n'], page_refs(pg), page_body(pg), out)
     has_cover = cover_path.is_file()
 
     publish(plan, n, has_cover)
     (ROOT / f'.pr-body-ep{n}.md').write_text(pr_body(plan, n, wishes, wish_err), 'utf-8')
+    clear_cached_plan(n)          # 落檔成功,這一話的續傳狀態不再需要
     print('落檔完成。PR 內文在 .pr-body-ep%d.md' % n)
     return 0
 

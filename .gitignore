@@ -3,3 +3,6 @@ __pycache__/
 .superpowers/
 # pipeline 落檔時寫出的 PR 內文,只餵給 gh pr create --body-file,不進 repo
 .pr-body-ep*.md
+
+# pipeline 的續傳狀態(企劃快取),不進 repo
+.pipeline-cache/

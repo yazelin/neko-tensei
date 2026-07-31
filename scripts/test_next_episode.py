@@ -162,6 +162,46 @@ class TestSaveImage(unittest.TestCase):
             self.assertEqual(Image.open(out).size, self.SIZE)
 
 
+class TestResume(unittest.TestCase):
+    """整話七張約 36 分鐘,中途掛掉不該從第一張重來。
+
+    但光跳過已存在的圖是錯的:企劃每次重跑都會叫 LLM 產一份新故事,沿用
+    舊圖等於把新劇本配舊圖。所以企劃本身也要一起快取,兩者是同一份狀態。
+    """
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        patcher = patch.object(ne, 'CACHE', pathlib.Path(self.tmp.name))
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_沒有快取時回_None(self):
+        self.assertIsNone(ne.load_cached_plan(3))
+
+    def test_存下去再讀回來是同一份(self):
+        p = _good_plan()
+        ne.save_cached_plan(3, p)
+        self.assertEqual(ne.load_cached_plan(3), p)
+
+    def test_不同話數的快取不互相污染(self):
+        ne.save_cached_plan(3, _good_plan())
+        self.assertIsNone(ne.load_cached_plan(4))
+
+    def test_壞掉的快取當作沒有而不是炸掉(self):
+        # 上一次跑到一半被砍,檔案寫了一半——這時候該重出企劃,不是整條線倒
+        (pathlib.Path(self.tmp.name) / 'ep3-plan.json').write_text('{"title": ', 'utf-8')
+        self.assertIsNone(ne.load_cached_plan(3))
+
+    def test_落檔成功後快取要清掉(self):
+        ne.save_cached_plan(3, _good_plan())
+        ne.clear_cached_plan(3)
+        self.assertIsNone(ne.load_cached_plan(3))
+
+    def test_清一個不存在的快取不會炸(self):
+        ne.clear_cached_plan(99)      # 沒跑到出圖就失敗時會走到這裡
+
+
 class TestInWorldUIText(unittest.TestCase):
     """世界內的英文 UI 文字是刻意開的例外,不是漏洞。
 
@@ -254,8 +294,8 @@ class TestWorldRefs(unittest.TestCase):
     def test_page_refs_把道具排在角色前面(self):
         page = {'n': '01', 'chars': ['xiaobai', 'uncle'], 'world': ['pass'], 'panels': []}
         keys = ne.page_refs(page)
-        self.assertEqual(keys[0], 'style')
-        self.assertEqual(keys[1], 'pass')
+        # 順序:畫風錨 → 框型錨(兩個都是「怎麼畫」)→ 道具鎖 → 角色(「畫什麼」)
+        self.assertEqual(keys[:3], ['style', 'balloons', 'pass'])
         self.assertLess(keys.index('pass'), keys.index('xiaobai'))
 
     def test_page_refs_不認得的道具_id_直接忽略(self):
@@ -273,6 +313,40 @@ class TestWorldRefs(unittest.TestCase):
         # 被截掉的時候,畫風錨與道具鎖必須留著
         self.assertIn('style', keys)
         self.assertIn('pass', keys)
+
+    def test_框型對照圖會被帶上(self):
+        """框型只有文字規則、沒有視覺錨,就是通行證漂掉的同一個病。
+
+        兩次真跑的第三話都一樣:SHOUT 畫得出來,OVAL 與 TREMBLE 全退化成
+        圓角矩形——而 prompt 的 REMINDER 早就明文警告過這個失敗模式。
+        """
+        page = {'n': '01', 'chars': ['xiaobai'], 'panels': []}
+        self.assertIn('balloons', ne.page_refs(page))
+
+    def test_框型圖排在畫風錨後面(self):
+        keys = ne.page_refs({'n': '01', 'chars': ['xiaobai'], 'panels': []})
+        self.assertEqual(keys[:2], ['style', 'balloons'])
+
+    def test_額度不夠時先犧牲框型圖而不是角色(self):
+        # 五位角色 + 前世 + 道具 + 畫風錨已經吃滿 8 張,框型圖是手法的錨,
+        # 角色設定圖是內容正確性——擠不下時該掉的是前者
+        page = {'n': '01',
+                'chars': ['xiaoniao', 'xiaobai', 'uncle', 'leo', 'kojiro'],
+                'world': ['pass'],
+                'panels': [{'pos': 'top', 'scene': 's',
+                            'lines': [{'speaker': 'xiaobai', 'shape': 'THOUGHT', 'text': 't'}]}]}
+        keys = ne.page_refs(page)
+        self.assertNotIn('balloons', keys)
+        for must in ('style', 'pass', 'past', 'xiaoniao', 'kojiro'):
+            self.assertIn(must, keys, must)
+
+    def test_封面不帶框型圖(self):
+        # 封面沒有對話框
+        self.assertNotIn('balloons', ne.cover_refs(_good_plan()))
+
+    def test_prompt_要明講不要把對照圖畫進頁面(self):
+        p = prompt.build_prompt('01', ['style', 'balloons', 'xiaobai'], 'x')
+        self.assertIn('Do NOT draw the chart itself into the page', p)
 
     def test_企劃寫了不存在的道具_id_驗證器要擋(self):
         p = _good_plan()
