@@ -71,14 +71,20 @@ def parse_wishes(payload):
 
 
 def fetch_wishes():
-    """讀首頁許願串。讀不到就回空清單——沒人許願不是錯誤。"""
+    """讀首頁許願串。
+
+    回 (許願清單, 失敗原因)。
+
+    「還沒有人許願」是正常狀態,不是錯誤——giscus 要等第一則留言才會建
+    discussion,所以第一週一定是空的,回 ([], None)。
+    但「gh 沒認證 / API 壞了」是真的該讓人知道的,回 ([], '原因'),
+    呼叫端才能把它寫進 PR 內文,而不是靜靜當成「這次沒有許願」。
+    """
     try:
         r = subprocess.run(['gh', 'api', 'graphql', '-f', f'query={_WISH_QUERY}'],
                            capture_output=True, text=True, timeout=60)
         if r.returncode != 0:
-            print('讀許願失敗,當作沒有許願繼續:', r.stderr.strip()[:200])
-            return []
-        return parse_wishes(json.loads(r.stdout))
+            return [], f'gh api graphql 失敗: {r.stderr.strip()[:200]}'
+        return parse_wishes(json.loads(r.stdout)), None
     except Exception as e:                      # noqa: BLE001 - 許願是加分項,不該擋住出稿
-        print('讀許願失敗,當作沒有許願繼續:', e)
-        return []
+        return [], f'{type(e).__name__}: {e}'
