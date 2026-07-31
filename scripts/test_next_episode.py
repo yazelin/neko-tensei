@@ -46,8 +46,10 @@ class TestPrompt(unittest.TestCase):
     def test_出場前世時才帶前世設定(self):
         with_past = prompt.build_prompt('04', ['style', 'past'], 'x')
         without = prompt.build_prompt('04', ['style', 'uncle'], 'x')
-        self.assertIn('FORMER HUMAN SELVES', with_past)
-        self.assertNotIn('FORMER HUMAN SELVES', without)
+        # 斷言用只出現在 PAST 常數裡的句子。不要用 'FORMER HUMAN SELVES'——
+        # REF['past'] 的說明文字本身就含那個字串,會讓這條測試變成假陽性。
+        self.assertIn('THE PAST IS ALWAYS BLACK AND WHITE', with_past)
+        self.assertNotIn('THE PAST IS ALWAYS BLACK AND WHITE', without)
 
     def test_七種框型都在(self):
         self.assertEqual(prompt.SHAPES, {
