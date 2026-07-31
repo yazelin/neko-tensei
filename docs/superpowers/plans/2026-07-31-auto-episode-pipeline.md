@@ -349,7 +349,7 @@ git commit -m "feat(pipeline): 讀 canon——已出的話、創作規範、最�
   - `WISH_CATEGORY: str` — `'Ideas'`
   - `WISH_TERM: str` — `'劇情許願'`
   - `parse_wishes(payload: dict) -> list[str]` — 純函式，從 GraphQL 回應挑出留言文字
-  - `fetch_wishes() -> list[str]` — 呼叫 `gh api graphql`，失敗或不存在時回 `[]`
+  - `fetch_wishes() -> tuple[list[str], str | None]` — 回（許願清單, 失敗原因）。討論串還不存在是正常的，回 `([], None)`；`gh` 真的失敗才回 `([], '原因')`
 
 - [ ] **Step 1: 加失敗的測試**
 
@@ -1083,7 +1083,7 @@ git commit -m "feat(pipeline): 企劃翻成生圖 prompt,並打 codex-image-serv
 - Produces:
   - `render_storyboard(plan: dict, n: int) -> str` — 產 `story/epN.md`
   - `episode_entry(plan: dict, n: int, date: str, has_cover: bool) -> dict` — 產 `episodes.json` 的一段
-  - `pr_body(plan: dict, n: int, wishes: list[str]) -> str`
+  - `pr_body(plan: dict, n: int, wishes: list[str], wish_err: str | None = None) -> str`
 
 - [ ] **Step 1: 加失敗的測試**
 
@@ -1350,7 +1350,9 @@ def main(argv=None):
     canon = load_canon()
     n = canon['next_n']
     titles = [e['title'] for e in canon['episodes']]
-    wishes = fetch_wishes()
+    wishes, wish_err = fetch_wishes()
+    if wish_err:
+        print('警告:讀許願失敗,這一話會當作沒有許願繼續 —', wish_err)
     print(f'第 {n} 話;讀到 {len(wishes)} 則許願')
 
     if a.plan_from:
@@ -1382,7 +1384,7 @@ def main(argv=None):
         has_cover = (ROOT / f'images/ep{n}/00-cover.webp').is_file()
 
     publish(plan, n, has_cover)
-    (ROOT / f'.pr-body-ep{n}.md').write_text(pr_body(plan, n, wishes), 'utf-8')
+    (ROOT / f'.pr-body-ep{n}.md').write_text(pr_body(plan, n, wishes, wish_err), 'utf-8')
     print('落檔完成。PR 內文在 .pr-body-ep%d.md' % n)
     return 0
 
