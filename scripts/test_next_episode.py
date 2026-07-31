@@ -80,5 +80,55 @@ class TestPrompt(unittest.TestCase):
             'SHOUT', 'OVAL', 'WEAK', 'TREMBLE', 'THOUGHT', 'DEMON', 'CAPTION'})
 
 
+class TestWishes(unittest.TestCase):
+    def test_挑出留言文字(self):
+        payload = {'data': {'repository': {'discussions': {'nodes': [
+            {'title': '劇情許願', 'category': {'name': 'Ideas'},
+             'comments': {'nodes': [
+                 {'body': '想看小白++單挑魔王'},
+                 {'body': '希望里歐的隱形術再出包一次'}]}},
+        ]}}}}
+        self.assertEqual(ne.parse_wishes(payload),
+                         ['想看小白++單挑魔王', '希望里歐的隱形術再出包一次'])
+
+    def test_只收許願那一串不收每話討論(self):
+        payload = {'data': {'repository': {'discussions': {'nodes': [
+            {'title': '/neko-tensei/ep2.html', 'category': {'name': 'General'},
+             'comments': {'nodes': [{'body': '這話好笑'}]}},
+            {'title': '劇情許願', 'category': {'name': 'Ideas'},
+             'comments': {'nodes': [{'body': '想看貓咪泡溫泉'}]}},
+        ]}}}}
+        self.assertEqual(ne.parse_wishes(payload), ['想看貓咪泡溫泉'])
+
+    def test_分類與標題兩個條件都要符合(self):
+        # brief 給的「只收許願那一串不收每話討論」測試裡,不合格的那個節點
+        # 標題跟分類同時錯,拿掉其中任一過濾條件測試照樣會過。這裡把兩個
+        # 條件拆開各錯一個,才能各自驗到。
+        payload = {'data': {'repository': {'discussions': {'nodes': [
+            {'title': '劇情許願', 'category': {'name': 'General'},
+             'comments': {'nodes': [{'body': '分類錯不該出現'}]}},
+            {'title': '其他討論串', 'category': {'name': 'Ideas'},
+             'comments': {'nodes': [{'body': '標題錯不該出現'}]}},
+            {'title': '劇情許願', 'category': {'name': 'Ideas'},
+             'comments': {'nodes': [{'body': '兩個都對才該出現'}]}},
+        ]}}}}
+        self.assertEqual(ne.parse_wishes(payload), ['兩個都對才該出現'])
+
+    def test_還沒有人許願時回空清單(self):
+        self.assertEqual(
+            ne.parse_wishes({'data': {'repository': {'discussions': {'nodes': []}}}}), [])
+
+    def test_回應格式不對也不炸(self):
+        self.assertEqual(ne.parse_wishes({}), [])
+        self.assertEqual(ne.parse_wishes({'data': None}), [])
+
+    def test_空白留言被濾掉(self):
+        payload = {'data': {'repository': {'discussions': {'nodes': [
+            {'title': '劇情許願', 'category': {'name': 'Ideas'},
+             'comments': {'nodes': [{'body': '  '}, {'body': '有效的許願'}]}},
+        ]}}}}
+        self.assertEqual(ne.parse_wishes(payload), ['有效的許願'])
+
+
 if __name__ == '__main__':
     unittest.main()

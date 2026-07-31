@@ -11,8 +11,18 @@
 """
 import json
 import pathlib
+import subprocess
 
 ROOT = pathlib.Path(__file__).parent.parent
+
+WISH_CATEGORY = 'Ideas'      # 內建分類,首頁許願串就掛在這裡
+WISH_TERM = '劇情許願'        # giscus 的 data-term,也是那串 discussion 的標題
+
+_WISH_QUERY = """
+{ repository(owner:"yazelin", name:"neko-tensei") {
+    discussions(first:20, orderBy:{field:UPDATED_AT, direction:DESC}) {
+      nodes { title category { name } comments(first:100) { nodes { body } } } } } }
+"""
 
 
 def load_canon():
@@ -35,3 +45,40 @@ def load_canon():
         'rules': rules,
         'recent': recent,
     }
+
+
+def parse_wishes(payload):
+    """從 GraphQL 回應挑出許願串的留言。純函式,方便測。
+
+    許願串可能還不存在——giscus 要等第一則留言才會建 discussion,
+    所以任何形狀對不上的情況都安靜回空清單,不要讓整條 pipeline 倒。
+    """
+    try:
+        nodes = payload['data']['repository']['discussions']['nodes']
+    except (KeyError, TypeError):
+        return []
+    out = []
+    for d in nodes or []:
+        if (d.get('category') or {}).get('name') != WISH_CATEGORY:
+            continue
+        if d.get('title') != WISH_TERM:
+            continue
+        for c in ((d.get('comments') or {}).get('nodes') or []):
+            body = (c.get('body') or '').strip()
+            if body:
+                out.append(body)
+    return out
+
+
+def fetch_wishes():
+    """讀首頁許願串。讀不到就回空清單——沒人許願不是錯誤。"""
+    try:
+        r = subprocess.run(['gh', 'api', 'graphql', '-f', f'query={_WISH_QUERY}'],
+                           capture_output=True, text=True, timeout=60)
+        if r.returncode != 0:
+            print('讀許願失敗,當作沒有許願繼續:', r.stderr.strip()[:200])
+            return []
+        return parse_wishes(json.loads(r.stdout))
+    except Exception as e:                      # noqa: BLE001 - 許願是加分項,不該擋住出稿
+        print('讀許願失敗,當作沒有許願繼續:', e)
+        return []
