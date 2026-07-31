@@ -21,8 +21,9 @@
 別人 fork 要換成自己的服務時看 README 的「想 fork 一份畫自己的漫畫」那張表。
 
 實測過的組合（2026-08-01）：企劃端 Groq（gpt-oss-120b / llama-3.3-70b / qwen3.6-27b）
-與 llmshare glm-5.2 都出得了通過驗證器的六頁企劃。**出圖端只實測過 codex**，
-`IMAGE_PROVIDER=gemini` 那條有單元測試但還沒拿真的 AI Studio 金鑰打過。
+與 llmshare glm-5.2 都出得了通過驗證器的六頁企劃。出圖端 `codex` 與 `gemini` 都真的打過，
+Gemini 一頁 25 秒(codex 是 234～696 秒),**但 `imageConfig` 不給就會回 1408×768 的橫幅**。
+金鑰用的是 .11 上 gemini-web 的 `GEMINI_OFFICIAL_API_KEY`(按張計費,測試花了 5 張)。
 
 **要 yazelin 做的兩件事：**
 
