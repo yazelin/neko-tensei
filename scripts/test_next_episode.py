@@ -3,6 +3,7 @@
 
 跑法: python3 -m unittest discover -s scripts -p 'test_*.py' -v
 """
+import io
 import json
 import pathlib
 import subprocess
@@ -416,18 +417,71 @@ class TestPlannerPrompt(unittest.TestCase):
         self.assertIn('由你自己決定要畫什麼', p)
 
     def test_prompt_列出四種話型(self):
-        p = ne.build_planner_prompt(ne.load_canon(), [])
+        # 斷言常數本身。不要斷言整份 prompt——_PLAN_SHAPE 的 JSON 範例裡
+        # 本來就有 "kind": "推進主線 | 日常番 | 烏龍 | 角色刻畫",
+        # 那會讓這條測試在 EPISODE_KINDS 整段被掏空時照樣通過。
         for k in ['推進主線', '日常番', '烏龍', '角色刻畫']:
-            self.assertIn(k, p)
+            self.assertIn(k, ne.EPISODE_KINDS)
+        # 也要確認它真的被組進 prompt
+        self.assertIn(ne.EPISODE_KINDS, ne.build_planner_prompt(ne.load_canon(), []))
 
     def test_prompt_明講不必每話推進主線(self):
         p = ne.build_planner_prompt(ne.load_canon(), [])
         self.assertIn('不必每一話都推進主線', p)
 
     def test_prompt_帶進七種框型(self):
-        p = ne.build_planner_prompt(ne.load_canon(), [])
-        for s in ['SHOUT', 'DEMON', 'CAPTION']:
-            self.assertIn(s, p)
+        # 斷言串接後的整串。單獨的 SHOUT/DEMON/CAPTION 在 story/README.md
+        # 的框型對照表裡就有,而 rules 一定會被塞進 prompt,那樣測不到東西。
+        joined = ' / '.join(sorted(prompt.SHAPES))
+        self.assertIn(joined, ne.build_planner_prompt(ne.load_canon(), []))
+
+
+class TestCallLLMErrors(unittest.TestCase):
+    """畸形回應要丟帶診斷資訊的 RuntimeError,不是裸的 KeyError/IndexError。
+
+    不打任何網路——urllib.request.urlopen 整個被 mock 掉,回傳一個假的
+    context manager,__enter__ 給一段 BytesIO 讓 json.load 讀。
+    """
+
+    def _urlopen_returning(self, payload):
+        cm = unittest.mock.MagicMock()
+        cm.__enter__.return_value = io.BytesIO(json.dumps(payload).encode())
+        return cm
+
+    @patch.dict('os.environ', {'GEMINI_API_KEY': 'fake-key-for-test'})
+    @patch('next_episode.urllib.request.urlopen')
+    def test_candidates是空list時丟RuntimeError帶promptFeedback(self, mock_urlopen):
+        mock_urlopen.return_value = self._urlopen_returning(
+            {'candidates': [], 'promptFeedback': {'blockReason': 'SAFETY'}})
+        with self.assertRaises(RuntimeError) as cm:
+            ne.call_llm('prompt')
+        self.assertIn('SAFETY', str(cm.exception))
+
+    @patch.dict('os.environ', {'GEMINI_API_KEY': 'fake-key-for-test'})
+    @patch('next_episode.urllib.request.urlopen')
+    def test_沒有candidates鍵時丟RuntimeError(self, mock_urlopen):
+        mock_urlopen.return_value = self._urlopen_returning({'error': {'message': 'boom'}})
+        with self.assertRaises(RuntimeError) as cm:
+            ne.call_llm('prompt')
+        # 訊息要指出問題出在 candidates,不能只是隨便一句 RuntimeError。
+        self.assertIn('candidates', str(cm.exception))
+
+    @patch.dict('os.environ', {'GEMINI_API_KEY': 'fake-key-for-test'})
+    @patch('next_episode.urllib.request.urlopen')
+    def test_被安全機制擋掉沒有parts時丟RuntimeError帶finishReason(self, mock_urlopen):
+        mock_urlopen.return_value = self._urlopen_returning(
+            {'candidates': [{'finishReason': 'SAFETY', 'content': {}}]})
+        with self.assertRaises(RuntimeError) as cm:
+            ne.call_llm('prompt')
+        self.assertIn('SAFETY', str(cm.exception))
+
+    @patch('next_episode.call_llm')
+    def test_LLM回非JSON時make_plan丟RuntimeError帶原文前300字(self, mock_call_llm):
+        mock_call_llm.return_value = '這不是 JSON,是 LLM 亂回的一段文字說明。'
+        canon = {'next_n': 3, 'rules': '', 'recent': ''}
+        with self.assertRaises(RuntimeError) as cm:
+            ne.make_plan(canon, [])
+        self.assertIn('這不是 JSON', str(cm.exception))
 
 
 if __name__ == '__main__':

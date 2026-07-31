@@ -386,8 +386,33 @@ def call_llm(text):
     req = urllib.request.Request(url, body, {'Content-Type': 'application/json'})
     with urllib.request.urlopen(req, timeout=300) as f:
         payload = json.load(f)
-    return payload['candidates'][0]['content']['parts'][0]['text']
+    try:
+        return payload['candidates'][0]['content']['parts'][0]['text']
+    except (KeyError, IndexError):
+        # 常見成因:內容被安全機制擋掉(這部漫畫有戰鬥、魔王、「四隻空瓶子」
+        # 這種挑釁台詞,撞到安全機制是真的會發生的情況,不是罕見邊角案例)、
+        # candidates 是空 list、或整包格式跟預期不一樣。原生的 KeyError/
+        # IndexError 只會指出「哪個鍵/索引不存在」,追蹤時分不出是被擋了還是
+        # API 本身出錯,所以把 finishReason / promptFeedback(如果有)與整包
+        # payload 的前 300 字一起帶出來。
+        candidates = payload.get('candidates') if isinstance(payload, dict) else None
+        candidates = candidates or []
+        finish_reason = candidates[0].get('finishReason') if candidates else None
+        prompt_feedback = payload.get('promptFeedback') if isinstance(payload, dict) else None
+        raise RuntimeError(
+            'gemini-web 回應裡沒有可用的文字內容'
+            '(取不到 candidates[0].content.parts[0].text)。'
+            f' finishReason={finish_reason!r} promptFeedback={prompt_feedback!r}'
+            f' payload 前 300 字:{json.dumps(payload, ensure_ascii=False)[:300]}') from None
 
 
 def make_plan(canon, wishes):
-    return json.loads(_strip_fence(call_llm(build_planner_prompt(canon, wishes))))
+    text = call_llm(build_planner_prompt(canon, wishes))
+    try:
+        return json.loads(_strip_fence(text))
+    except json.JSONDecodeError as e:
+        # 拿掉包裝直接讓 JSONDecodeError 往外丟,追蹤只看得到「哪個字元解析
+        # 失敗」,看不到 LLM 實際回了什麼——這裡把原文前 300 字帶出來,才
+        # 查得出是圍籬沒拆乾淨還是 LLM 真的沒照格式回。
+        raise RuntimeError(
+            f'LLM 回傳的不是合法 JSON:{e}。實際回傳內容前 300 字:{text[:300]}') from None
