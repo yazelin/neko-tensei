@@ -427,15 +427,33 @@ POS_LABEL = {'top': 'top', 'mid': 'middle', 'middle': 'middle', 'bottom': 'botto
 
 
 def page_body(page):
-    """把企劃的一頁翻成給繪圖模型看的 PANEL 段落。"""
+    """把企劃的一頁翻成給繪圖模型看的 PANEL 段落。
+
+    `scene`/`shape`/`text` 三個欄位缺任何一個都要炸,而且錯誤要指得出是
+    第幾頁第幾格——這支之後在 GitHub Actions 無人值守跑,裸 KeyError 在
+    log 裡跟其他 bug 分不出來;`scene` 缺欄位又特別危險,原本是靜默印出
+    `PANEL 1 (top): `(空場景)不報錯也不留痕跡,會默默組出一份沒有畫面
+    描述的 prompt,花掉一次出圖額度產一張沒人要的圖。
+    """
+    n = page.get('n', '?')
     out = []
     for i, pn in enumerate(page.get('panels') or [], 1):
+        where = f'第 {n} 頁第 {i} 格'
+        scene = pn.get('scene')
+        if not (scene or '').strip():
+            raise ValueError(f'{where}缺 scene')
         pos = POS_LABEL.get(pn.get('pos'), pn.get('pos') or '')
-        out.append(f"PANEL {i} ({pos}): {pn.get('scene', '')}")
+        out.append(f"PANEL {i} ({pos}): {scene}")
         for ln in pn.get('lines') or []:
-            kind = 'CAPTION BOX' if ln['shape'] == 'CAPTION' else f"{ln['shape']} BALLOON"
+            shape = ln.get('shape')
+            if not (shape or '').strip():
+                raise ValueError(f'{where}缺 shape')
+            text = ln.get('text')
+            if not (text or '').strip():
+                raise ValueError(f'{where}缺 text')
+            kind = 'CAPTION BOX' if shape == 'CAPTION' else f"{shape} BALLOON"
             who = SPEAKER_REF.get(ln.get('speaker'), ln.get('speaker') or '')
-            out.append(f"  {kind} from {who}: {ln['text']}")
+            out.append(f"  {kind} from {who}: {text}")
     return "\n".join(out)
 
 
@@ -473,12 +491,19 @@ def generate_image(name, keys, body, out):
     req = urllib.request.Request(f'{IMG_BASE}/v1/images/jobs', body_json, hdr, method='POST')
     with urllib.request.urlopen(req, timeout=180) as f:
         job = json.load(f)
-    print(f'  job {name} {job["id"]}', flush=True)
+    job_id = job.get('id')
+    if not job_id:
+        # 裸 KeyError 只看得出「id 不在」,看不出服務實際回了什麼——這裡
+        # 跟 call_llm 的畸形回應處理一樣,把回應前 300 字帶出來方便追蹤。
+        raise RuntimeError(
+            f'{name} 出圖失敗:建立 job 的回應沒有 id。'
+            f' 回應前 300 字:{json.dumps(job, ensure_ascii=False)[:300]}')
+    print(f'  job {name} {job_id}', flush=True)
 
     t0 = time.time()
     while True:
         time.sleep(15)
-        q = urllib.request.Request(f'{IMG_BASE}/v1/images/jobs/{job["id"]}',
+        q = urllib.request.Request(f'{IMG_BASE}/v1/images/jobs/{job_id}',
                                    headers={'Authorization': hdr['Authorization']})
         with urllib.request.urlopen(q, timeout=60) as f:
             st = json.load(f)
@@ -489,7 +514,12 @@ def generate_image(name, keys, body, out):
     if st['status'] != 'succeeded':
         raise RuntimeError(f'{name} 出圖失敗: {str(st.get("error"))[:200]}')
 
-    url = st['images'][0]['url']
+    images = st.get('images')
+    if not images or not images[0].get('url'):
+        raise RuntimeError(
+            f'{name} 出圖失敗:狀態是 succeeded 但回應沒有 images。'
+            f' 回應前 300 字:{json.dumps(st, ensure_ascii=False)[:300]}')
+    url = images[0]['url']
     if url.startswith('/'):
         url = IMG_BASE + url
     out.parent.mkdir(parents=True, exist_ok=True)

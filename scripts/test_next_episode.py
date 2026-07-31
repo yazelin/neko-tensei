@@ -529,5 +529,68 @@ class TestPageBody(unittest.TestCase):
         self.assertIn('FINAL CHECK', p)
 
 
+class TestPageBodyMissingFields(unittest.TestCase):
+    """review 抓到的三種缺欄位:原本 scene 缺欄位是靜默印出空場景,
+    shape/text 缺欄位是裸 KeyError,三種都要改成能指出第幾頁第幾格的
+    ValueError,GitHub Actions 無人值守跑的時候 log 才看得出是哪裡壞的。
+    """
+
+    def test_缺scene會丟ValueError帶頁碼與格號(self):
+        page = {'n': '03', 'panels': [
+            {'pos': 'top', 'scene': 'ok', 'lines': []},
+            {'pos': 'mid', 'lines': [{'speaker': 'uncle', 'shape': 'OVAL', 'text': 'x'}]}]}
+        with self.assertRaises(ValueError) as cm:
+            ne.page_body(page)
+        self.assertIn('第 03 頁第 2 格缺 scene', str(cm.exception))
+
+    def test_缺shape會丟ValueError帶頁碼與格號(self):
+        page = {'n': '01', 'panels': [
+            {'pos': 'top', 'scene': 'x',
+             'lines': [{'speaker': 'uncle', 'text': '哼'}]}]}
+        with self.assertRaises(ValueError) as cm:
+            ne.page_body(page)
+        self.assertIn('第 01 頁第 1 格缺 shape', str(cm.exception))
+
+    def test_缺text會丟ValueError帶頁碼與格號(self):
+        page = {'n': '01', 'panels': [
+            {'pos': 'top', 'scene': 'x',
+             'lines': [{'speaker': 'uncle', 'shape': 'OVAL'}]}]}
+        with self.assertRaises(ValueError) as cm:
+            ne.page_body(page)
+        self.assertIn('第 01 頁第 1 格缺 text', str(cm.exception))
+
+
+class TestGenerateImageMalformedResponse(unittest.TestCase):
+    """generate_image 對畸形回應要丟帶診斷資訊的 RuntimeError,不是裸
+    KeyError。不打網路,不真的睡 15 秒——urllib.request.urlopen 與
+    time.sleep 都 mock 掉,跟 TestCallLLMErrors 用同一套手法。
+    """
+
+    def _urlopen_returning(self, payload):
+        cm = unittest.mock.MagicMock()
+        cm.__enter__.return_value = io.BytesIO(json.dumps(payload).encode())
+        return cm
+
+    @patch.dict('os.environ', {'CODEX_IMAGE_KEY': 'fake-key-for-test'})
+    @patch('next_episode.urllib.request.urlopen')
+    def test_job建立回應缺id時丟RuntimeError(self, mock_urlopen):
+        mock_urlopen.return_value = self._urlopen_returning({'status': 'queued'})
+        with self.assertRaises(RuntimeError) as cm:
+            ne.generate_image('01', ['style'], 'body', pathlib.Path('/tmp/unused.png'))
+        self.assertIn('id', str(cm.exception))
+
+    @patch.dict('os.environ', {'CODEX_IMAGE_KEY': 'fake-key-for-test'})
+    @patch('next_episode.time.sleep')
+    @patch('next_episode.urllib.request.urlopen')
+    def test_succeeded但沒有images時丟RuntimeError(self, mock_urlopen, mock_sleep):
+        mock_urlopen.side_effect = [
+            self._urlopen_returning({'id': 'job-1'}),
+            self._urlopen_returning({'status': 'succeeded'}),
+        ]
+        with self.assertRaises(RuntimeError) as cm:
+            ne.generate_image('01', ['style'], 'body', pathlib.Path('/tmp/unused.png'))
+        self.assertIn('images', str(cm.exception))
+
+
 if __name__ == '__main__':
     unittest.main()
