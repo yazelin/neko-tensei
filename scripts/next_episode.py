@@ -11,9 +11,12 @@
   python3 scripts/next_episode.py                    整條跑完
 """
 import json
+import os
 import pathlib
+import re
 import subprocess
 import sys
+import urllib.request
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 import prompt
@@ -298,3 +301,93 @@ def validate_plan(plan, next_n, titles):
             errs.append(f'第 {n} 頁的框型全部一樣({page_shapes[0]}),框型要跟著情緒走')
 
     return errs
+
+
+GEMINI_BASE = os.environ.get('GEMINI_WEB_BASE_URL', 'https://ching-tech.ddns.net/gemini-web')
+GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-2.5-flash')
+
+_PLAN_SHAPE = """{
+  "title": "不含「第N話」三個字的標題",
+  "kind": "推進主線 | 日常番 | 烏龍 | 角色刻畫",
+  "desc": "一到兩句,給網站 meta description 用",
+  "beats": ["轉折一", "轉折二", "轉折三"],
+  "pages": [
+    { "n": "01",
+      "chars": ["出場角色的 slug"],
+      "panels": [
+        { "pos": "top|mid|bottom",
+          "scene": "這一格畫什麼,英文,給繪圖模型看",
+          "lines": [ { "speaker": "角色 slug", "shape": "框型", "text": "對白" } ] }
+      ] }
+  ]
+}"""
+
+
+EPISODE_KINDS = """這一話可以是下面任何一種，你自己選最適合的，不必每一話都推進主線：
+
+- **推進主線**：收伏筆、往黑塔走
+- **日常番**：不推進劇情，就是四貓在異世界過日子
+- **烏龍**：能力出包、誤會、雞飛狗跳
+- **角色刻畫**：挖某一位的性格或過去
+
+一年五十二話沒辦法每話都推伏筆，硬推會把線燒完。但不管哪一種，都不可以跟
+既有設定矛盾，角色性格也不能走鐘。"""
+
+
+def build_planner_prompt(canon, wishes):
+    wish_block = ("社群這次的許願（要盡量收進去，收不進去的就留給以後）：\n"
+                  + "\n".join(f'- {w}' for w in wishes)) if wishes else \
+        '這次沒有社群許願，由你自己決定要畫什麼。'
+    return f"""你是《轉生成貓貓的我們》的編劇。請企劃第 {canon['next_n']} 話。
+
+這部作品的創作規範（必須遵守）：
+────────
+{canon['rules']}
+────────
+
+最近兩話的分鏡（第 {canon['next_n']} 話要接得上，特別是沒收的伏筆）：
+────────
+{canon['recent']}
+────────
+
+{wish_block}
+
+{EPISODE_KINDS}
+
+請輸出**純 JSON**，不要 markdown 圍籬、不要任何說明文字。格式：
+{_PLAN_SHAPE}
+
+硬性要求：
+- 內頁正好 6 頁，每頁 2 到 3 個分格
+- `shape` 只能是這七種之一：{' / '.join(sorted(prompt.SHAPES))}
+- 角色 slug 只能是：{' / '.join(sorted(CHARS))}
+- **同一頁的框型不可以全部一樣**，框型要跟著情緒走
+- 對白一律正體中文（台灣用語），一頁 3 到 6 句，句子不要長
+- kojiro 不可以用 THOUGHT 框，他沒有前世可以浮出來
+- 標題不可以跟既有話數重複"""
+
+
+def _strip_fence(s):
+    """LLM 常常還是會包 markdown 圍籬,拆掉。"""
+    m = re.search(r'```(?:json)?\s*(.+?)\s*```', s, re.S)
+    return m.group(1) if m else s.strip()
+
+
+def call_llm(text):
+    """打 gemini-web 取得企劃文字。"""
+    key = os.environ.get('GEMINI_API_KEY', '')
+    if not key:
+        raise RuntimeError('沒有 GEMINI_API_KEY,無法呼叫 gemini-web')
+    url = f'{GEMINI_BASE}/v1beta/models/{GEMINI_MODEL}:generateContent?key={key}'
+    body = json.dumps({
+        'contents': [{'parts': [{'text': text}]}],
+        'generationConfig': {'response_mime_type': 'application/json'},
+    }).encode()
+    req = urllib.request.Request(url, body, {'Content-Type': 'application/json'})
+    with urllib.request.urlopen(req, timeout=300) as f:
+        payload = json.load(f)
+    return payload['candidates'][0]['content']['parts'][0]['text']
+
+
+def make_plan(canon, wishes):
+    return json.loads(_strip_fence(call_llm(build_planner_prompt(canon, wishes))))

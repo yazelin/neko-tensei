@@ -396,5 +396,39 @@ class TestValidate(unittest.TestCase):
         self.assertTrue(any('缺欄位:title' in e for e in errs), errs)
 
 
+class TestPlannerPrompt(unittest.TestCase):
+    def test_prompt_帶進規範與最近分鏡(self):
+        canon = ne.load_canon()
+        p = ne.build_planner_prompt(canon, [])
+        self.assertIn('對話框的形狀跟著劇情走', p)
+        self.assertIn('得加 Token', p)
+
+    def test_prompt_要求純JSON(self):
+        p = ne.build_planner_prompt(ne.load_canon(), [])
+        self.assertIn('JSON', p)
+
+    def test_有許願時會寫進去(self):
+        p = ne.build_planner_prompt(ne.load_canon(), ['想看貓咪泡溫泉'])
+        self.assertIn('想看貓咪泡溫泉', p)
+
+    def test_沒有許願時明講由AI自己決定(self):
+        p = ne.build_planner_prompt(ne.load_canon(), [])
+        self.assertIn('由你自己決定要畫什麼', p)
+
+    def test_prompt_列出四種話型(self):
+        p = ne.build_planner_prompt(ne.load_canon(), [])
+        for k in ['推進主線', '日常番', '烏龍', '角色刻畫']:
+            self.assertIn(k, p)
+
+    def test_prompt_明講不必每話推進主線(self):
+        p = ne.build_planner_prompt(ne.load_canon(), [])
+        self.assertIn('不必每一話都推進主線', p)
+
+    def test_prompt_帶進七種框型(self):
+        p = ne.build_planner_prompt(ne.load_canon(), [])
+        for s in ['SHOUT', 'DEMON', 'CAPTION']:
+            self.assertIn(s, p)
+
+
 if __name__ == '__main__':
     unittest.main()
