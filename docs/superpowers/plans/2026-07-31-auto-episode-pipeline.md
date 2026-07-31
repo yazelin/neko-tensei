@@ -1735,7 +1735,7 @@ prompt 寫壞了);出圖重試三次,服務端偶爾回 502 內容重複偵測�
 **Interfaces:**
 - Consumes: Task 9 的 `scripts/next_episode.py` 與它產出的 `.pr-body-epN.md`
 
-- [ ] **Step 1: 建立 workflow**
+- [x] **Step 1: 建立 workflow**
 
 ```yaml
 name: 下一話
@@ -1825,7 +1825,7 @@ jobs:
             --body "跑失敗了，沒有留下半成品 PR。記錄在 ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 ```
 
-- [ ] **Step 2: 檢查 YAML 語法**
+- [x] **Step 2: 檢查 YAML 語法**
 
 ```bash
 cd ~/neko-tensei && python3 -c "
@@ -1840,7 +1840,7 @@ print('有 tab 縮排的行:', [i for i,l in enumerate(t.split(chr(10)),1) if l.
 
 Expected：`有 tab 縮排的行: 無`。
 
-- [ ] **Step 3: 建立 label**
+- [x] **Step 3: 建立 label**
 
 ```bash
 cd ~/neko-tensei && gh label create auto-episode --color 8A63D2 --description "自動產出的草稿,待人工確認" 2>&1 | tail -1
@@ -1848,7 +1848,7 @@ cd ~/neko-tensei && gh label create auto-episode --color 8A63D2 --description "�
 
 Expected：建立成功，或 `already exists`（都可以）。
 
-- [ ] **Step 4: 更新 `NEXT.md` 的交接事項**
+- [x] **Step 4: 更新 `NEXT.md` 的交接事項**
 
 把 `NEXT.md` 的「## 自動連載 pipeline（下一個要做的）」整段換成：
 
@@ -1892,7 +1892,7 @@ python3 -m unittest discover -s scripts -p 'test_*.py' -v
 ```
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add .github/workflows/next-episode.yml NEXT.md
