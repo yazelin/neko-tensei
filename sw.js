@@ -1,12 +1,17 @@
 /* 轉生成貓貓的我們 — service worker
    兩層快取(做法沿用 token-unlimited / gewu 的實測筆記):
-     SHELL —— 殼:HTML/CSS/manifest/小 icon。每次部署都 bump。
-     ASSET —— 漫畫頁與角色圖。只有同名檔換內容才 bump。
+     SHELL —— 殼:HTML/CSS/manifest/小 icon。
+     ASSET —— 漫畫頁與角色圖。
+   兩層各自的版號是那層清單的內容 hash,由 build.py 算,不必也不要手動 bump。
    HTML network-first、資產 cache-first;match 一律 ignoreSearch+ignoreVary
    (GitHub Pages 回 Vary: Accept-Encoding,不加 ignoreVary 會 miss)。 */
 
-const SHELL = 'nt-shell-v19';
-const ASSET = 'nt-asset-v12';
+/* 版號由 build.py 從清單裡每個檔案的內容算出來,別手改。改殼檔或換圖跑一次
+   build.py 就會自己變;要強制所有讀者重來,改 build.py 的 EPOCH。 */
+/* ver:start */
+const SHELL = 'nt-shell-v20-1d25ba92';
+const ASSET = 'nt-asset-v20-c32beb0e';
+/* ver:end */
 
 /* 以下兩份清單由 build.py 從 episodes.json 產生,別手改。 */
 const SHELL_FILES = [

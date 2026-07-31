@@ -19,7 +19,7 @@
 1. **寫分鏡** — 開 `story/epN.md`，每一頁三格，逐格寫「畫什麼／誰在說什麼」。**對白逐字寫進分鏡，也逐字寫進生圖 prompt。**
 2. **生圖** — 用 `story/epN.md` 裡每頁的 prompt，經 codex-imagegen 多參考圖 edit 產出成品頁（含對白），存 `images/epN/NN.webp`。
 3. **逐頁驗字** — 放大看每一個對話框，確認沒有簡體字、沒有錯字、沒有多餘的字。有問題就整頁重生。
-4. **上站** — `episodes.json` 加一段，跑 `python3 build.py`，bump `sw.js` 版本，commit push。
+4. **上站** — `episodes.json` 加一段，跑 `python3 build.py`（快取版號它會自己重算），commit push。
 
 ## 鐵律
 

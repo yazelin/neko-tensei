@@ -7,6 +7,7 @@
 import html
 import pathlib
 import sys
+import tempfile
 import unittest
 
 ROOT = pathlib.Path(__file__).parent.parent
@@ -54,6 +55,55 @@ class TestBuildAltEscape(unittest.TestCase):
         normal_alt = '深夜十一點的科技公司，四位工程師還在加班'
         out = self._build_and_read(normal_alt)
         self.assertIn(f'alt="{normal_alt}">', out)
+
+
+class TestCacheVersionDigest(unittest.TestCase):
+    """sw.js 的快取版號改成內容 hash 之後,人不再手動 bump。這幾條就是那個
+    保證:內容變一定變、內容沒變一定不變。任一條壞掉,讀者就會拿到舊快取
+    (或白抓一次十幾 MB),而且兩種都難從表面看出來。
+    """
+
+    def _in_tmp(self, fn):
+        with tempfile.TemporaryDirectory() as d:
+            root = pathlib.Path(d)
+            old = bd.ROOT
+            bd.ROOT = root
+            try:
+                fn(root)
+            finally:
+                bd.ROOT = old
+
+    def test_同樣內容算兩次一樣_且與清單順序無關(self):
+        def check(root):
+            (root / 'a.txt').write_bytes(b'one')
+            (root / 'b.txt').write_bytes(b'two')
+            v = bd.digest(['a.txt', 'b.txt'])
+            self.assertEqual(v, bd.digest(['a.txt', 'b.txt']))
+            self.assertEqual(v, bd.digest(['b.txt', 'a.txt']))
+        self._in_tmp(check)
+
+    def test_檔案內容變版號就變(self):
+        def check(root):
+            (root / 'a.txt').write_bytes(b'one')
+            v = bd.digest(['a.txt'])
+            (root / 'a.txt').write_bytes(b'ONE')
+            self.assertNotEqual(v, bd.digest(['a.txt']))
+        self._in_tmp(check)
+
+    def test_清單增刪版號就變(self):
+        def check(root):
+            (root / 'a.txt').write_bytes(b'one')
+            (root / 'b.txt').write_bytes(b'two')
+            self.assertNotEqual(bd.digest(['a.txt']), bd.digest(['a.txt', 'b.txt']))
+        self._in_tmp(check)
+
+    def test_內容一樣但改名也算變動(self):
+        # 路徑有進 hash。改名等於清單變了,快取鍵也該跟著換。
+        def check(root):
+            (root / 'a.txt').write_bytes(b'same')
+            (root / 'b.txt').write_bytes(b'same')
+            self.assertNotEqual(bd.digest(['a.txt']), bd.digest(['b.txt']))
+        self._in_tmp(check)
 
 
 if __name__ == '__main__':

@@ -162,14 +162,13 @@ python3 ~/cast-lock-skill/check.py --cast story/cast.json --chars <這頁出場�
 ```bash
 # 圖放進 images/epN/,然後
 # 1. episodes.json 加一段(頁次與 alt 都寫在這裡)
-# 2. 產生頁面
+# 2. 產生頁面(順便重算 sw.js 的快取版號)
 python3 build.py
-# 3. bump sw.js 的 SHELL 版本號
 ```
 
 ⚠️ **`ep/*.html` 是 `build.py` 的產生檔，改它等於白改。** 要改就改 `build.py` 或 `episodes.json`。
 
-⚠️ **`sw.js` 的 `ASSET` 版本號只有換圖才 bump。** 新增一話有新圖，所以這次 `SHELL` 與 `ASSET` 都要 +1。但如果你只改了文字沒動圖，只 bump `SHELL`——跟著一起 bump 會讓讀者重抓 10 MB 的圖。
+⚠️ **`sw.js` 的兩個快取版號不用手動改。** `build.py` 會從殼檔與圖檔的內容各算一個 hash：只改文字沒動圖，`ASSET` 就不會變，讀者不會白抓 10 MB 的圖。
 
 ### 6. 開 PR
 
