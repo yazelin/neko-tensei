@@ -10,12 +10,14 @@
   python3 scripts/next_episode.py --plan-from p.json 跳過 LLM,用現成企劃
   python3 scripts/next_episode.py                    整條跑完
 """
+import base64
 import json
 import os
 import pathlib
 import re
 import subprocess
 import sys
+import time
 import urllib.request
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
@@ -416,3 +418,81 @@ def make_plan(canon, wishes):
         # 查得出是圍籬沒拆乾淨還是 LLM 真的沒照格式回。
         raise RuntimeError(
             f'LLM 回傳的不是合法 JSON:{e}。實際回傳內容前 300 字:{text[:300]}') from None
+
+
+IMG_BASE = os.environ.get('CODEX_IMAGE_BASE_URL', 'https://ching-tech.ddns.net/codex-image')
+SPEAKER_REF = {'xiaoniao': 'xiaoniao', 'xiaobai': 'xiaobai',
+               'uncle': 'uncle', 'leo': 'leo', 'kojiro': 'kojiro'}
+POS_LABEL = {'top': 'top', 'mid': 'middle', 'middle': 'middle', 'bottom': 'bottom'}
+
+
+def page_body(page):
+    """把企劃的一頁翻成給繪圖模型看的 PANEL 段落。"""
+    out = []
+    for i, pn in enumerate(page.get('panels') or [], 1):
+        pos = POS_LABEL.get(pn.get('pos'), pn.get('pos') or '')
+        out.append(f"PANEL {i} ({pos}): {pn.get('scene', '')}")
+        for ln in pn.get('lines') or []:
+            kind = 'CAPTION BOX' if ln['shape'] == 'CAPTION' else f"{ln['shape']} BALLOON"
+            who = SPEAKER_REF.get(ln.get('speaker'), ln.get('speaker') or '')
+            out.append(f"  {kind} from {who}: {ln['text']}")
+    return "\n".join(out)
+
+
+def page_refs(page):
+    """該頁要傳哪幾張參考圖。image 1 永遠是畫風,之後接出場角色。
+
+    有 THOUGHT 框代表畫面上會有前世的記憶泡,那就要多帶前世設定圖——
+    只給文字描述的話四個人全會畫錯。
+    """
+    keys = ['style']
+    for c in page.get('chars') or []:
+        k = SPEAKER_REF.get(c)
+        if k and k not in keys:
+            keys.append(k)
+    has_os = any(ln.get('shape') == 'THOUGHT'
+                 for pn in page.get('panels') or []
+                 for ln in pn.get('lines') or [])
+    if has_os and 'past' not in keys:
+        keys.append('past')
+    return keys
+
+
+def generate_image(name, keys, body, out):
+    """打 .11 的 codex-image-service,把圖存到 out。"""
+    key = os.environ.get('CODEX_IMAGE_KEY', '')
+    if not key:
+        raise RuntimeError('沒有 CODEX_IMAGE_KEY')
+    refs = [base64.b64encode((ROOT / prompt.REF[k][0]).read_bytes()).decode() for k in keys]
+    body_json = json.dumps({
+        'prompt': prompt.build_prompt(name, keys, body),
+        'size': '1024x1536', 'quality': 'high', 'count': 1,
+        'reference_images_base64': refs,
+    }).encode()
+    hdr = {'Authorization': f'Bearer {key}', 'Content-Type': 'application/json'}
+    req = urllib.request.Request(f'{IMG_BASE}/v1/images/jobs', body_json, hdr, method='POST')
+    with urllib.request.urlopen(req, timeout=180) as f:
+        job = json.load(f)
+    print(f'  job {name} {job["id"]}', flush=True)
+
+    t0 = time.time()
+    while True:
+        time.sleep(15)
+        q = urllib.request.Request(f'{IMG_BASE}/v1/images/jobs/{job["id"]}',
+                                   headers={'Authorization': hdr['Authorization']})
+        with urllib.request.urlopen(q, timeout=60) as f:
+            st = json.load(f)
+        if st['status'] in ('succeeded', 'failed', 'error'):
+            break
+        if time.time() - t0 > 2400:
+            raise RuntimeError(f'{name} 出圖逾時')
+    if st['status'] != 'succeeded':
+        raise RuntimeError(f'{name} 出圖失敗: {str(st.get("error"))[:200]}')
+
+    url = st['images'][0]['url']
+    if url.startswith('/'):
+        url = IMG_BASE + url
+    out.parent.mkdir(parents=True, exist_ok=True)
+    with urllib.request.urlopen(url, timeout=300) as r, out.open('wb') as w:
+        w.write(r.read())
+    print(f'  -> {name} ok {int(time.time() - t0)}s', flush=True)
