@@ -57,7 +57,8 @@ SHAPES_BLOCK = """BALLOON SHAPES - each line below names its own balloon shape. 
 
 RULES = """DIALOGUE RULES - the most important part, follow exactly:
 - All text is TRADITIONAL CHINESE (zh-TW, Taiwan). Copy each string CHARACTER BY CHARACTER exactly as given. Never simplify a character, never substitute a similar-looking character, never invent extra characters, never leave a character out.
-- The ONLY text allowed in the whole image is: the dialogue listed below, plus the single character 貓 engraved on the samurai cat's gold medallion. No sound effects, no signature, no watermark, no page numbers, no English captions.
+- The text allowed in the whole image is exactly these three things: (1) the dialogue listed below; (2) the single character 貓 engraved on the samurai cat's gold medallion; (3) in-world English UI text that a PANEL description explicitly asks for - screens, holographic displays, progress bars, banners, signboards. Draw (3) exactly as the panel description spells it, in plain Latin letters, as part of the scenery.
+- Nothing else: no sound effects, no signature, no watermark, no page numbers, and never an English translation or transcription of the Chinese dialogue.
 - Keep balloons clear of the characters' faces."""
 
 REMINDER = ("FINAL CHECK before you draw: the balloons on this page must NOT all be the same shape. "
