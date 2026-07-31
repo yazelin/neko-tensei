@@ -36,14 +36,32 @@ jobs:
             exit 1
           fi
 
-      - name: 確認 secrets 齊全
+      # 要哪些金鑰看選了哪組後端。以前這裡硬要求 CODEX_IMAGE_KEY,換成
+      # Gemini 出圖的人會被自己的檢查擋下來,而錯誤訊息還指向一把他根本
+      # 不需要的金鑰。
+      - name: 確認選到的後端有金鑰
         env:
+          PLANNER_PROVIDER: ${{ vars.PLANNER_PROVIDER }}
+          IMAGE_PROVIDER: ${{ vars.IMAGE_PROVIDER }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           CODEX_IMAGE_KEY: ${{ secrets.CODEX_IMAGE_KEY }}
+          GEMINI_IMAGE_KEY: ${{ secrets.GEMINI_IMAGE_KEY }}
         run: |
+          P="${PLANNER_PROVIDER:-gemini}"
+          I="${IMAGE_PROVIDER:-codex}"
+          echo "企劃走 $P,出圖走 $I"
           miss=0
-          [ -z "$GEMINI_API_KEY" ]  && { echo "::error::缺 GEMINI_API_KEY";  miss=1; }
-          [ -z "$CODEX_IMAGE_KEY" ] && { echo "::error::缺 CODEX_IMAGE_KEY"; miss=1; }
+          case "$P" in
+            gemini) [ -n "$GEMINI_API_KEY" ] || { echo "::error::PLANNER_PROVIDER=gemini 但缺 GEMINI_API_KEY"; miss=1; } ;;
+            openai) [ -n "$OPENAI_API_KEY" ] || { echo "::error::PLANNER_PROVIDER=openai 但缺 OPENAI_API_KEY"; miss=1; } ;;
+            *) echo "::error::不認得的 PLANNER_PROVIDER=$P(只有 gemini / openai)"; miss=1 ;;
+          esac
+          case "$I" in
+            codex)  [ -n "$CODEX_IMAGE_KEY" ] || { echo "::error::IMAGE_PROVIDER=codex 但缺 CODEX_IMAGE_KEY"; miss=1; } ;;
+            gemini) [ -n "$GEMINI_IMAGE_KEY$GEMINI_API_KEY" ] || { echo "::error::IMAGE_PROVIDER=gemini 但 GEMINI_IMAGE_KEY 與 GEMINI_API_KEY 都沒設"; miss=1; } ;;
+            *) echo "::error::不認得的 IMAGE_PROVIDER=$I(只有 codex / gemini)"; miss=1 ;;
+          esac
           exit $miss
 
       - name: 算出這次是第幾話
@@ -68,10 +86,23 @@ jobs:
         id: gen
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # 金鑰走 secrets,選哪個後端與模型名走 vars(不是機密,而且在
+          # repo 設定頁看得到現在跑的是哪一組)。沒設的一律是空字串,
+          # 腳本用 `or` 退回內建預設。
+          PLANNER_PROVIDER: ${{ vars.PLANNER_PROVIDER }}
+          IMAGE_PROVIDER: ${{ vars.IMAGE_PROVIDER }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_WEB_BASE_URL: ${{ secrets.GEMINI_WEB_BASE_URL }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_BASE_URL: ${{ vars.OPENAI_BASE_URL }}
+          OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
+          OPENAI_MAX_TOKENS: ${{ vars.OPENAI_MAX_TOKENS }}
           CODEX_IMAGE_KEY: ${{ secrets.CODEX_IMAGE_KEY }}
           CODEX_IMAGE_BASE_URL: ${{ secrets.CODEX_IMAGE_BASE_URL }}
+          GEMINI_IMAGE_KEY: ${{ secrets.GEMINI_IMAGE_KEY }}
+          GEMINI_IMAGE_BASE_URL: ${{ vars.GEMINI_IMAGE_BASE_URL }}
+          GEMINI_IMAGE_MODEL: ${{ vars.GEMINI_IMAGE_MODEL }}
         run: python3 scripts/next_episode.py
 
       - name: 開 PR
