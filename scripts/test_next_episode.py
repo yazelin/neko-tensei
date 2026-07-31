@@ -88,6 +88,31 @@ class TestPrompt(unittest.TestCase):
             'SHOUT', 'OVAL', 'WEAK', 'TREMBLE', 'THOUGHT', 'DEMON', 'CAPTION'})
 
 
+class TestInWorldUIText(unittest.TestCase):
+    """世界內的英文 UI 文字是刻意開的例外,不是漏洞。
+
+    第一次真跑產出的第三話,企劃在畫面描述裡寫了 'Patch 1.0.3 Downloading...'
+    與 'Welcome Admin',模型照畫了——那跟舊版 RULES 的「圖上唯一允許的文字
+    是對白加一個貓字」直接牴觸,同一份 prompt 裡兩段指令打架。這部作品的角色
+    是工程師,那種 UI 文字是梗的一部分,所以規則改成放行,並明確界定範圍。
+    """
+
+    def test_RULES_放行畫面描述指定的英文_UI_文字(self):
+        self.assertIn('in-world English UI text', prompt.RULES)
+
+    def test_RULES_仍然禁止把對白翻成英文貼上去(self):
+        self.assertIn('never an English translation or transcription',
+                      prompt.RULES)
+
+    def test_RULES_仍然禁止狀聲字與浮水印(self):
+        for banned in ('no sound effects', 'no watermark', 'no page numbers'):
+            self.assertIn(banned, prompt.RULES, banned)
+
+    def test_貓字例外還在(self):
+        # 放行英文 UI 的時候很容易順手把這條寫掉,它是另一件事
+        self.assertIn('貓', prompt.RULES)
+
+
 class TestCastJsonIsTheSource(unittest.TestCase):
     """設定資料的單一事實來源是 story/cast.json,prompt.py 只負責組裝。
 
