@@ -709,6 +709,25 @@ def cover_body(plan):
             f"reference image 1.")
 
 
+def cover_refs(plan):
+    """封面的參考圖:畫風錨 → 這一話出現過的道具/場景 → 五位角色。
+
+    道具鎖排在角色前面、而且非帶不可——第三話第一次真跑時封面沒帶任何道具
+    鎖,通行證被畫成一張紅色長方形門禁卡(內頁那張則畫成金懷錶,兩張各漂
+    各的)。封面通常是最多人看到的一張,不能是唯一沒上鎖的那張。
+
+    上限一樣是 MAX_REFS。角色排最後,因為封面本來就要五位全到,萬一道具多
+    到擠掉角色,那是企劃該收斂,不是這裡該偷偷丟掉鎖。
+    """
+    keys = ['style']
+    for pg in plan.get('pages') or []:
+        for w in pg.get('world') or []:
+            if w in prompt.WORLD_KEYS and w not in keys:
+                keys.append(w)
+    keys += ['xiaoniao', 'xiaobai', 'uncle', 'leo', 'kojiro']
+    return keys[:MAX_REFS]
+
+
 def generate_with_retry(name, keys, body, out):
     """出圖失敗重試。服務端偶爾會回 502(內容重複偵測),再打一次通常就好。"""
     last = None
@@ -811,9 +830,7 @@ def main(argv=None):
     if not a.skip_images:
         # 社群投稿的封面永遠優先:已經有檔案就不要蓋掉
         if not cover_path.is_file():
-            generate_with_retry('cover', ['style', 'xiaoniao', 'xiaobai', 'uncle',
-                                          'leo', 'kojiro'],
-                                cover_body(plan), cover_path)
+            generate_with_retry('cover', cover_refs(plan), cover_body(plan), cover_path)
         else:
             print('封面已存在,跳過(社群投稿優先)')
         for pg in plan['pages']:

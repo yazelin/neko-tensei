@@ -195,6 +195,26 @@ class TestWorldRefs(unittest.TestCase):
         errs = ne.validate_plan(p, 3, [])
         self.assertTrue(any('道具' in e or 'world' in e for e in errs), errs)
 
+    def test_封面也要帶道具鎖(self):
+        # 第三話第一次真跑,封面沒帶任何道具鎖,通行證被畫成紅色長方形門禁卡
+        # (內頁那張則畫成金懷錶)。封面是最多人看到的一張,不能是唯一沒上鎖的。
+        p = _good_plan()
+        p['pages'][2]['world'] = ['pass']
+        keys = ne.cover_refs(p)
+        self.assertEqual(keys[0], 'style')
+        self.assertIn('pass', keys)
+        self.assertLess(keys.index('pass'), keys.index('xiaobai'))
+
+    def test_封面沒道具時就只有畫風錨與五位角色(self):
+        keys = ne.cover_refs(_good_plan())
+        self.assertEqual(keys, ['style', 'xiaoniao', 'xiaobai', 'uncle', 'leo', 'kojiro'])
+
+    def test_封面參考圖不超過上限(self):
+        p = _good_plan()
+        for pg in p['pages']:
+            pg['world'] = ['pass']
+        self.assertLessEqual(len(ne.cover_refs(p)), ne.MAX_REFS)
+
     def test_企劃沒寫_world_欄位也算合法(self):
         # world 是選配,舊企劃不該因為少這個欄位就被擋下來
         self.assertEqual(ne.validate_plan(_good_plan(), 3, ['我們怎麼變成貓了？！']), [])
