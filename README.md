@@ -28,6 +28,12 @@
 | 里歐 | 盜賊 | 冷靜的咖啡系帥哥 |
 | 荒坂小次郎 | 魔王 | 不明 |
 
+## 想一起畫？
+
+看 [CONTRIBUTING.md](CONTRIBUTING.md)——投一張圖、畫一整話、加新角色，三條路各自寫清楚了。
+
+只是想許願劇情的話，直接到[首頁的許願串](https://yazelin.github.io/neko-tensei/#wish)留言就好。
+
 ## 話數
 
 | 話 | 標題 |
