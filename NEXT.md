@@ -33,11 +33,14 @@
 
 **本機怎麼試：**
 
-先裝唯一的相依（Ubuntu 24.04 需要 `--break-system-packages`）：
+先裝兩個相依（Ubuntu 24.04 需要 `--break-system-packages`）：
 
 ```bash
-pip install --user --break-system-packages opencc-python-reimplemented
+pip install --user --break-system-packages opencc-python-reimplemented pillow
 ```
+
+`opencc` 驗簡繁，`pillow` 落檔時把圖重壓成 webp——生圖服務回的是近無損檔，
+一頁 3.7 MB，不壓一話就 23 MB，而這個站是 PWA，圖全部會被 precache。
 
 ```bash
 # 金鑰只從環境變數讀,不要寫進任何檔案

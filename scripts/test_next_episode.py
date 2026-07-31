@@ -32,11 +32,29 @@ class TestCanon(unittest.TestCase):
         self.assertIn('必勝', c['rules'])
 
     def test_帶進最近兩話的分鏡(self):
+        """最後兩話都要在,再往前一話不可以在。
+
+        原本這裡寫死「ep1 的字串 + ep2 的字串」,第三話一落地就紅了——它驗的
+        其實是「現在剛好只有兩話」,不是「取最後兩話」。改成從 episodes.json
+        推導:兩話各斷言一次(只斷言最後一話的話,把 [-2:] 改成 [-1:] 照樣會過,
+        就測不到「兩話」),再斷言更早那話不在,才鎖得住上界。
+
+        指標用各話分鏡檔自己的 H1 整行(含開頭的 `# `),不是標題字串——標題會被
+        別話引用(ep2.md 講字幕替換時就整句引了第一話的標題),拿標題當指標會讓
+        「不在」那條斷言假失敗。H1 只會出現在自己的檔案裡。
+        """
         c = ne.load_canon()
-        # 兩話各斷言一個只出現在自己檔案裡的字串。不要兩個都選 ep2 的——
-        # 那樣把 eps[-2:] 改成 eps[-1:] 測試照樣會過,測不到「兩話」。
-        self.assertIn('史萊姆登場過場頁', c['recent'])   # 只在 ep1.md
-        self.assertIn('魔力不足', c['recent'])           # 只在 ep2.md
+        ns = sorted(e['n'] for e in c['episodes'])
+        story = pathlib.Path(__file__).parent.parent / 'story'
+
+        def h1(n):
+            return (story / f'ep{n}.md').read_text('utf-8').splitlines()[0]
+
+        for n in ns[-2:]:
+            self.assertIn(h1(n), c['recent'], f'最後兩話之一沒帶進來:第 {n} 話')
+        if len(ns) > 2:
+            self.assertNotIn(h1(ns[-3]), c['recent'],
+                             f'帶進了第三舊的一話,取的不是「最近兩話」:第 {ns[-3]} 話')
 
     def test_話數不重複(self):
         c = ne.load_canon()
@@ -86,6 +104,102 @@ class TestPrompt(unittest.TestCase):
     def test_七種框型都在(self):
         self.assertEqual(prompt.SHAPES, {
             'SHOUT', 'OVAL', 'WEAK', 'TREMBLE', 'THOUGHT', 'DEMON', 'CAPTION'})
+
+
+class TestSaveImage(unittest.TestCase):
+    """落檔要重新壓縮。
+
+    第一次真跑的第三話是 23 MB,手工做的第一話 3.5 MB、第二話 4.7 MB——
+    因為 generate_image 把服務端回來的近無損 webp 直接寫檔。這個站是 PWA,
+    圖檔全部會被 precache,一話 23 MB 每加一話就疊一次。
+    """
+
+    SIZE = (200, 200)
+    _RAW = None
+
+    @classmethod
+    def _big_webp(cls):
+        """一張壓不太動的圖,確認重壓真的有發生。整個類別只做一次。
+
+        第一版用 (i*37 + j*91) % 256 當「噪點」,其實是平滑漸層,無損壓完
+        只有 114 bytes,測試因此紅得莫名其妙。改用固定種子的亂數——固定
+        種子是為了每次跑都一樣,不要讓測試的成敗看運氣。
+
+        無損編碼噪點很慢,所以圖只開 200x200,而且結果快取起來重複用:
+        每個 test 各編一次 400x400 會讓整套測試從 0.03 秒變成 5 秒。
+        """
+        if cls._RAW is None:
+            import io
+            import random
+            from PIL import Image
+            px = random.Random(0).randbytes(cls.SIZE[0] * cls.SIZE[1] * 3)
+            buf = io.BytesIO()
+            Image.frombytes('RGB', cls.SIZE, px).save(buf, 'WEBP', quality=100, lossless=True)
+            cls._RAW = buf.getvalue()
+        return cls._RAW
+
+    def test_webp_會被重新壓縮而不是原樣寫入(self):
+        raw = self._big_webp()
+        with tempfile.TemporaryDirectory() as d:
+            out = pathlib.Path(d) / 'x.webp'
+            ne.save_image(raw, out)
+            self.assertLess(out.stat().st_size, len(raw),
+                            '落檔的檔案沒有比服務端回來的小,重壓沒生效')
+
+    def test_非_webp_原樣寫入(self):
+        # 一次性腳本會存 .png 來目視,那條路徑不該被改寫
+        with tempfile.TemporaryDirectory() as d:
+            out = pathlib.Path(d) / 'x.png'
+            ne.save_image(b'not-an-image', out)
+            self.assertEqual(out.read_bytes(), b'not-an-image')
+
+    def test_重壓後尺寸不變(self):
+        from PIL import Image
+        raw = self._big_webp()
+        with tempfile.TemporaryDirectory() as d:
+            out = pathlib.Path(d) / 'x.webp'
+            ne.save_image(raw, out)
+            self.assertEqual(Image.open(out).size, self.SIZE)
+
+
+class TestResume(unittest.TestCase):
+    """整話七張約 36 分鐘,中途掛掉不該從第一張重來。
+
+    但光跳過已存在的圖是錯的:企劃每次重跑都會叫 LLM 產一份新故事,沿用
+    舊圖等於把新劇本配舊圖。所以企劃本身也要一起快取,兩者是同一份狀態。
+    """
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        patcher = patch.object(ne, 'CACHE', pathlib.Path(self.tmp.name))
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_沒有快取時回_None(self):
+        self.assertIsNone(ne.load_cached_plan(3))
+
+    def test_存下去再讀回來是同一份(self):
+        p = _good_plan()
+        ne.save_cached_plan(3, p)
+        self.assertEqual(ne.load_cached_plan(3), p)
+
+    def test_不同話數的快取不互相污染(self):
+        ne.save_cached_plan(3, _good_plan())
+        self.assertIsNone(ne.load_cached_plan(4))
+
+    def test_壞掉的快取當作沒有而不是炸掉(self):
+        # 上一次跑到一半被砍,檔案寫了一半——這時候該重出企劃,不是整條線倒
+        (pathlib.Path(self.tmp.name) / 'ep3-plan.json').write_text('{"title": ', 'utf-8')
+        self.assertIsNone(ne.load_cached_plan(3))
+
+    def test_落檔成功後快取要清掉(self):
+        ne.save_cached_plan(3, _good_plan())
+        ne.clear_cached_plan(3)
+        self.assertIsNone(ne.load_cached_plan(3))
+
+    def test_清一個不存在的快取不會炸(self):
+        ne.clear_cached_plan(99)      # 沒跑到出圖就失敗時會走到這裡
 
 
 class TestInWorldUIText(unittest.TestCase):
@@ -141,6 +255,17 @@ class TestCastJsonIsTheSource(unittest.TestCase):
         self.assertIn('three round balls', prompt.SHEET)
         self.assertIn('NO paw print', prompt.SHEET)
 
+    def test_兩隻褐虎斑的分界有寫到字面(self):
+        """小鳥不啾與小白++ 都是褐虎斑,毛長是唯一分得開的地方。
+
+        第三話第 02 頁小白++ 被畫上了小鳥不啾的眼鏡。當時設定裡「長毛」只寫在
+        小鳥不啾那邊,小白++ 完全沒提毛長;眼鏡那句寫成「臉上一定看得到」卻沒說
+        只屬於她——一份 prompt 裡同時有強指令和兩隻長得像的貓,眼鏡就跑掉了。
+        """
+        self.assertIn('SHORT-HAIRED', prompt.SHEET, '小白++ 的短毛沒寫進設定表')
+        self.assertIn('NO glasses', prompt.SHEET, '沒寫死小白++ 不戴眼鏡')
+        self.assertIn('NEVER on any other cat', prompt.SHEET, '沒寫死眼鏡只屬於小鳥不啾')
+
     def test_道具設定圖是乾淨的單一物件(self):
         rel = self.cast['world']['pass']['ref']
         p = pathlib.Path(__file__).parent.parent / rel
@@ -169,8 +294,8 @@ class TestWorldRefs(unittest.TestCase):
     def test_page_refs_把道具排在角色前面(self):
         page = {'n': '01', 'chars': ['xiaobai', 'uncle'], 'world': ['pass'], 'panels': []}
         keys = ne.page_refs(page)
-        self.assertEqual(keys[0], 'style')
-        self.assertEqual(keys[1], 'pass')
+        # 順序:畫風錨 → 框型錨(兩個都是「怎麼畫」)→ 道具鎖 → 角色(「畫什麼」)
+        self.assertEqual(keys[:3], ['style', 'balloons', 'pass'])
         self.assertLess(keys.index('pass'), keys.index('xiaobai'))
 
     def test_page_refs_不認得的道具_id_直接忽略(self):
@@ -189,6 +314,40 @@ class TestWorldRefs(unittest.TestCase):
         self.assertIn('style', keys)
         self.assertIn('pass', keys)
 
+    def test_框型對照圖會被帶上(self):
+        """框型只有文字規則、沒有視覺錨,就是通行證漂掉的同一個病。
+
+        兩次真跑的第三話都一樣:SHOUT 畫得出來,OVAL 與 TREMBLE 全退化成
+        圓角矩形——而 prompt 的 REMINDER 早就明文警告過這個失敗模式。
+        """
+        page = {'n': '01', 'chars': ['xiaobai'], 'panels': []}
+        self.assertIn('balloons', ne.page_refs(page))
+
+    def test_框型圖排在畫風錨後面(self):
+        keys = ne.page_refs({'n': '01', 'chars': ['xiaobai'], 'panels': []})
+        self.assertEqual(keys[:2], ['style', 'balloons'])
+
+    def test_額度不夠時先犧牲框型圖而不是角色(self):
+        # 五位角色 + 前世 + 道具 + 畫風錨已經吃滿 8 張,框型圖是手法的錨,
+        # 角色設定圖是內容正確性——擠不下時該掉的是前者
+        page = {'n': '01',
+                'chars': ['xiaoniao', 'xiaobai', 'uncle', 'leo', 'kojiro'],
+                'world': ['pass'],
+                'panels': [{'pos': 'top', 'scene': 's',
+                            'lines': [{'speaker': 'xiaobai', 'shape': 'THOUGHT', 'text': 't'}]}]}
+        keys = ne.page_refs(page)
+        self.assertNotIn('balloons', keys)
+        for must in ('style', 'pass', 'past', 'xiaoniao', 'kojiro'):
+            self.assertIn(must, keys, must)
+
+    def test_封面不帶框型圖(self):
+        # 封面沒有對話框
+        self.assertNotIn('balloons', ne.cover_refs(_good_plan()))
+
+    def test_prompt_要明講不要把對照圖畫進頁面(self):
+        p = prompt.build_prompt('01', ['style', 'balloons', 'xiaobai'], 'x')
+        self.assertIn('Do NOT draw the chart itself into the page', p)
+
     def test_企劃寫了不存在的道具_id_驗證器要擋(self):
         p = _good_plan()
         p['pages'][0]['world'] = ['不存在的東西']
@@ -205,9 +364,10 @@ class TestWorldRefs(unittest.TestCase):
         self.assertIn('pass', keys)
         self.assertLess(keys.index('pass'), keys.index('xiaobai'))
 
-    def test_封面沒道具時就只有畫風錨與五位角色(self):
+    def test_封面沒道具時就只有兩個錨與五位角色(self):
         keys = ne.cover_refs(_good_plan())
-        self.assertEqual(keys, ['style', 'xiaoniao', 'xiaobai', 'uncle', 'leo', 'kojiro'])
+        self.assertEqual(keys, ['style', 'cover_style',
+                                'xiaoniao', 'xiaobai', 'uncle', 'leo', 'kojiro'])
 
     def test_封面參考圖不超過上限(self):
         p = _good_plan()
@@ -866,29 +1026,67 @@ class TestBaseUrlFallback(unittest.TestCase):
 
 
 class TestCover(unittest.TestCase):
+    """封面要跟第一、二話同一個系列:大標題、角色名牌、底部話數帶。
+
+    pipeline 一開始刻意讓封面完全無字(理由是「文字烤進圖裡,改一個字就是
+    整張重生」),結果第三話封面跟前兩話不是同一個系列——前兩話的標題就是
+    AI 畫進去的(story/README.md 有一整段在講外稿封面的錯字怎麼修,會有錯字
+    正代表那些字是模型畫的)。所以改回烤字,並把前兩話的封面當參考圖鎖版面。
+    """
+
     def test_封面描述帶進三個轉折(self):
-        b = ne.cover_body(_good_plan())
+        b = ne.cover_body(_good_plan(), 3)
         for beat in _good_plan()['beats']:
             self.assertIn(beat, b)
 
-    def test_封面明確要求全員入鏡且無文字(self):
-        b = ne.cover_body(_good_plan())
-        self.assertIn('NO text', b)
-        self.assertIn('all five', b.lower())
+    def test_封面要求全員入鏡(self):
+        self.assertIn('all five', ne.cover_body(_good_plan(), 3).lower())
 
-    def test_封面用的prompt不含對白規則(self):
-        p = prompt.build_prompt('cover', ['style'], ne.cover_body(_good_plan()))
+    def test_封面帶作品大標題(self):
+        self.assertIn('轉生成貓貓的我們', ne.cover_body(_good_plan(), 3))
+
+    def test_封面底部帶話數與這一話標題(self):
+        b = ne.cover_body(_good_plan(), 3)
+        self.assertIn('第三話：黑塔上的另一個人', b)
+
+    def test_話數用中文數字(self):
+        self.assertIn('第十話：', ne.cover_body(_good_plan(), 10))
+
+    def test_封面帶五位角色的名牌(self):
+        b = ne.cover_body(_good_plan(), 3)
+        for name in ne.NAME.values():
+            self.assertIn(name, b, name)
+
+    def test_封面不含對話框規則(self):
+        # 封面沒有對白,不該帶 BALLOON SHAPES——但它現在有字,所以要帶逐字
+        # 照抄的規則,這兩件事不是同一件
+        p = prompt.build_prompt('cover', ['style'], ne.cover_body(_good_plan(), 3))
+        self.assertNotIn('BALLOON SHAPES', p)
+
+    def test_封面要帶逐字照抄的中文規則(self):
+        p = prompt.build_prompt('cover', ['style'], ne.cover_body(_good_plan(), 3))
+        self.assertIn('CHARACTER BY CHARACTER', p)
+
+    def test_角色卡仍然完全無字(self):
+        p = prompt.build_prompt('kojiro', ['kojiro'], 'A single portrait')
+        self.assertNotIn('CHARACTER BY CHARACTER', p)
         self.assertNotIn('BALLOON SHAPES', p)
 
     def test_封面要壓掉BASE的三格分鏡指令(self):
         # BASE 寫死「THREE horizontal panels」,封面是單張圖。body 排在
         # prompt 最後面,這句反指令必須在,不然模型會照 BASE 畫成三格。
-        p = prompt.build_prompt('cover', ['style'], ne.cover_body(_good_plan()))
+        p = prompt.build_prompt('cover', ['style'], ne.cover_body(_good_plan(), 3))
         self.assertIn('THREE horizontal panels', p)          # BASE 還在
         self.assertIn('NOT a multi-panel page', p)           # 反指令也在
         self.assertGreater(p.index('NOT a multi-panel page'),
                            p.index('THREE horizontal panels'),
                            '反指令必須排在 BASE 之後才蓋得掉')
+
+    def test_封面參考圖含既有封面當版面錨(self):
+        keys = ne.cover_refs(_good_plan())
+        self.assertIn('cover_style', keys)
+        self.assertLess(keys.index('cover_style'), keys.index('xiaoniao'),
+                        '版面錨要排在角色前面')
 
 
 class TestRetry(unittest.TestCase):
