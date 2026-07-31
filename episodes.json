@@ -108,6 +108,43 @@
           "alt": "魔王大笑並拋下紅色紋章當通行證，四貓回頭望見遠方黑塔頂端亮起更大的藍白色魔法陣，第二話完"
         }
       ]
+    },
+    {
+      "n": 3,
+      "title": "伺服器重啟中！",
+      "date": "2026-07-31",
+      "desc": "拿到了紅色通行證的四貓準備進塔，卻撞上了黑塔最原始也最可怕的防禦機制——例行性維護。",
+      "credit": "劇情與作畫：Claude × gpt-image-2",
+      "pages": [
+        {
+          "f": "00-cover.webp",
+          "alt": "第三話封面：伺服器重啟中！"
+        },
+        {
+          "f": "01.webp",
+          "alt": "SWORDSMAN CAT proudly holds up THE PASS - the round black medallion with a red rim and a flat red three-balled emblem - in front of a massive iron gate of the black tower, looking ultra confident.：小白++「有小次郎的通行證，這塔我們直接橫著走！」、中年攻城屍「"
+        },
+        {
+          "f": "02.webp",
+          "alt": "The surrounding dark forest begins to glitched out; sky color glitches into low-poly grey rectangles, ground pixels pixelating.：小白++「地板！地板變成了格子！」、中年攻城屍「全體迎戰！一定是強敵的領域展開！」、中年攻城屍「老夫的鋼"
+        },
+        {
+          "f": "03.webp",
+          "alt": "A huge progress bar titled 'Patch 1.0.3 Downloading...' hangs frozen in the sky at 99%, glowing cold white light.：小白++「Boss……還沒出來嗎？」、里歐「卡在 99% 了。」、中年攻城屍「老夫的姿勢……快舉不住了……」、小鳥不啾「就說了是卡進"
+        },
+        {
+          "f": "04.webp",
+          "alt": "MAGE CAT bites the thick glowing magic cable with her cat teeth and violently pulls it out from the stone pedestal socket.：小鳥不啾「遇到死機，拔掉重插！」、小白++「關、關掉了？！」、中年攻城屍「救命，老夫看不見了！」、小鳥不啾「再等五"
+        },
+        {
+          "f": "05.webp",
+          "alt": "The world instantly lights up in warm golden light; the massive iron gate creaks open smoothly with a cheerful chime sound.：小白++「門開了！更新完了！」、中年攻城屍「哼，不愧是老夫戰術的一部分。」、里歐「大叔你剛剛明明差點腿軟。」、小"
+        },
+        {
+          "f": "06.webp",
+          "alt": "The four cats step inside the towering dark lobby; high up on a floating platform, a mysterious cat silhouette surrounded by dark cyan screens looks down at them.：小白++「請問……這裡的機房管理員"
+        }
+      ]
     }
   ]
 }

@@ -21,7 +21,9 @@ _BASE = (CAST_PATH.parent / _CAST.get('root', '.')).resolve()
 # 參考圖。image 1 永遠是第一話成品頁,鎖畫風、上墨感與手寫黑體字;
 # 之後接這一格要鎖的道具/場景,再接出場角色的設定圖。光靠文字描述會漂——
 # 寫「圓形金牌」模型會畫成肉球牌,所以設定圖一定要傳。
-REF = {'style': (_CAST['style_ref']['path'], _CAST['style_ref']['desc'])}
+REF = {'style': (_CAST['style_ref']['path'], _CAST['style_ref']['desc']),
+       'cover_style': (_CAST['cover_ref']['path'], _CAST['cover_ref']['desc']),
+       'balloons': (_CAST['balloon_ref']['path'], _CAST['balloon_ref']['desc'])}
 for _k, _v in list(_CAST['cast'].items()) + list(_CAST.get('world', {}).items()):
     REF[_k] = (_v['ref'], _v['desc'])
 
@@ -47,6 +49,7 @@ FORMER HUMAN SELVES - only used inside memory bubbles. Copy them from the model 
 THE PAST IS ALWAYS BLACK AND WHITE: render every memory bubble in greyscale with a faint neon-blue glow, exactly like the model sheet. The cat world stays in full colour. This contrast is the whole point."""
 
 SHAPES_BLOCK = """BALLOON SHAPES - each line below names its own balloon shape. Draw that exact shape; do NOT default every balloon to a rounded rectangle. Hand-inked manga feel, slightly irregular outlines, never a perfect geometric shape.
+One of the reference images is a chart of these seven shapes drawn EMPTY on white - copy the silhouettes from that chart, it is the authority for what each shape looks like. Do NOT draw the chart itself into the page, and do NOT copy its empty balloons as extra balloons; use it only as the shape reference for the balloons listed below.
 - SHOUT BALLOON: spiky explosion burst with sharp jagged points all around, thick black outline, large bold text.
 - OVAL BALLOON: soft hand-drawn organic oval, thin black outline, with a short curved tail pointing at the speaker.
 - WEAK BALLOON: small squashed oval with a thin wobbly or dashed outline, small text, deflated feeling.
@@ -66,9 +69,15 @@ REMINDER = ("FINAL CHECK before you draw: the balloons on this page must NOT all
             "draw exactly that shape for each one. A page where every balloon is a rounded rectangle is wrong.")
 
 
-# 這些頁面沒有對白,也不該有任何文字:角色卡與封面。
-# 封面刻意不烤標題進去——文字烤進圖裡,改一個字就是整張重生。
-NO_TEXT = {'kojiro', 'cover'}
+COVER_RULES = """COVER TEXT RULES - the cover carries lettering, follow exactly:
+- All text is TRADITIONAL CHINESE (zh-TW, Taiwan). Copy each string CHARACTER BY CHARACTER exactly as given. Never simplify a character, never substitute a similar-looking character, never invent extra characters, never leave a character out.
+- The ONLY text on the cover is the title lockup, the character name tags and the bottom episode band described below, plus the single character 貓 on the samurai cat's medallion. No tagline, no author name, no watermark, no signature, no English.
+- Lettering style follows reference image 2: chunky hand-drawn brush-gothic Chinese display type with a thick gold outline and a dark drop shadow, sitting on top of the artwork."""
+
+
+# 角色卡完全沒有文字。封面有文字,但沒有對話框——那是兩件事,別混在一起。
+NO_TEXT = {'kojiro'}
+NO_BALLOONS = {'kojiro', 'cover'}
 
 
 def world_block(keys):
@@ -95,9 +104,11 @@ def build_prompt(name, keys, body):
     if world:
         parts.append(world)
     parts.append(sheet)
-    if name not in NO_TEXT:
+    if name not in NO_BALLOONS:
         parts += [SHAPES_BLOCK, RULES]
+    elif name not in NO_TEXT:
+        parts.append(COVER_RULES)          # 有字、沒有對話框
     out = "\n\n".join(parts) + "\n\n" + body
-    if name not in NO_TEXT:
+    if name not in NO_BALLOONS:
         out += "\n\n" + REMINDER
     return out
