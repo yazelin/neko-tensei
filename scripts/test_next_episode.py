@@ -592,5 +592,77 @@ class TestGenerateImageMalformedResponse(unittest.TestCase):
         self.assertIn('images', str(cm.exception))
 
 
+class TestRender(unittest.TestCase):
+    def test_分鏡檔含標題轉折與每頁對白(self):
+        md = ne.render_storyboard(_good_plan(), 3)
+        self.assertIn('第三話：黑塔上的另一個人', md)
+        self.assertIn('塔前受阻', md)
+        self.assertIn('那座塔越來越近了。', md)
+
+    def test_分鏡檔含該頁的生圖prompt(self):
+        md = ne.render_storyboard(_good_plan(), 3)
+        self.assertIn('PANEL 1 (top):', md)
+
+    def test_episodes條目頁數正確(self):
+        e = ne.episode_entry(_good_plan(), 3, '2026-08-07', has_cover=True)
+        self.assertEqual(e['n'], 3)
+        self.assertEqual(len(e['pages']), 7)
+        self.assertEqual(e['pages'][0]['f'], '00-cover.webp')
+        self.assertEqual(e['pages'][-1]['f'], '06.webp')
+
+    def test_沒有封面時只有六頁(self):
+        e = ne.episode_entry(_good_plan(), 3, '2026-08-07', has_cover=False)
+        self.assertEqual(len(e['pages']), 6)
+        self.assertEqual(e['pages'][0]['f'], '01.webp')
+
+    def test_每頁都有alt文字(self):
+        e = ne.episode_entry(_good_plan(), 3, '2026-08-07', has_cover=True)
+        for p in e['pages']:
+            self.assertTrue(p['alt'].strip(), p)
+
+    def test_PR內文每頁都附劇本說的(self):
+        b = ne.pr_body(_good_plan(), 3, [])
+        self.assertIn('劇本說的', b)
+        self.assertIn('那座塔越來越近了。', b)
+
+    def test_PR內文列出許願並說明有沒有收進去(self):
+        b = ne.pr_body(_good_plan(), 3, ['想看貓咪泡溫泉'])
+        self.assertIn('想看貓咪泡溫泉', b)
+        self.assertIn('讀了 1 則社群許願', b)
+
+    def test_PR內文標出話型(self):
+        p = _good_plan(); p['kind'] = '日常番'
+        self.assertIn('話型：日常番', ne.pr_body(p, 3, []))
+
+    def test_沒有許願時PR內文要講明(self):
+        b = ne.pr_body(_good_plan(), 3, [])
+        self.assertIn('由 AI 自己決定', b)
+
+    def test_PR內文提醒要看的是圖有沒有照劇本畫(self):
+        b = ne.pr_body(_good_plan(), 3, [])
+        self.assertIn('圖有沒有照劇本畫', b)
+
+    def test_讀許願失敗時PR內文要講明不能誤判成沒有許願(self):
+        # wish_err 非 None 是「讀取本身出錯」,不是「這次沒有人許願」——
+        # 兩者混在一起顯示,社群寫了許願卻全被當成沒發生過,而且沒人會
+        # 發現。這裡同時鎖住「有講失敗原因」與「不能出現沒有許願那句話」,
+        # 只斷言前者會漏掉「函式其實還是走了沒有許願那個分支、只是額外
+        # 多印一行失敗訊息」這種半吊子修法。
+        err = 'gh api graphql 失敗: authentication required'
+        b = ne.pr_body(_good_plan(), 3, [], wish_err=err)
+        self.assertIn('讀許願失敗', b)
+        self.assertIn(err, b)
+        self.assertNotIn('這次沒有許願，由 AI 自己決定要畫什麼', b)
+
+    def test_讀許願失敗時就算有許願清單也要以失敗為準(self):
+        # 理論上 wish_err 非 None 時 wishes 應該永遠是空清單(fetch_wishes
+        # 的介面保證),但呼叫端萬一傳錯也不該讓「有許願」的分支蓋掉失敗
+        # 訊息——失敗優先顯示,不然還是會出現「看起來收到許願了」的假象。
+        err = 'gh api graphql 失敗: rate limited'
+        b = ne.pr_body(_good_plan(), 3, ['想看貓咪泡溫泉'], wish_err=err)
+        self.assertIn('讀許願失敗', b)
+        self.assertNotIn('讀了 1 則社群許願', b)
+
+
 if __name__ == '__main__':
     unittest.main()

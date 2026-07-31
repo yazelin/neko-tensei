@@ -476,6 +476,110 @@ def page_refs(page):
     return keys
 
 
+CN = '一二三四五六七八九十'
+NAME = {'xiaoniao': '小鳥不啾', 'xiaobai': '小白++', 'uncle': '中年攻城屍',
+        'leo': '里歐', 'kojiro': '荒坂小次郎'}
+
+
+def _zh(n):
+    return CN[n - 1] if 1 <= n <= 10 else str(n)
+
+
+def _page_alt(page):
+    """用該頁的畫面與對白湊一句 alt。SEO 與無障礙都靠它。"""
+    scene = (page.get('panels') or [{}])[0].get('scene', '')
+    says = '、'.join(f'{NAME.get(s, s)}「{t}」'
+                    for _n, s, _sh, t in _lines({'pages': [page]}))
+    return (scene + '：' + says)[:180] if says else scene[:180]
+
+
+def render_storyboard(plan, n):
+    out = [f"# 第{_zh(n)}話：{plan['title']}\n",
+           '先讀 [`story/README.md`](README.md) 的鐵律與框型表再動手。'
+           '這一話由 pipeline 產出,對白與框型跟生圖 prompt 是同一份。\n',
+           '## 這一話在講什麼\n', plan['desc'] + '\n',
+           '三個轉折：\n']
+    out += [f'{i}. {b}' for i, b in enumerate(plan['beats'], 1)]
+    out.append('')
+    for pg in plan['pages']:
+        out.append(f"\n---\n\n## {pg['n']}\n")
+        out.append('| 格 | 畫面 | 對白 | 框型 |')
+        out.append('|---|---|---|---|')
+        for pn in pg.get('panels') or []:
+            first = True
+            for ln in pn.get('lines') or []:
+                pos = pn.get('pos', '') if first else ''
+                scene = pn.get('scene', '') if first else ''
+                out.append(f"| {pos} | {scene} | "
+                           f"{NAME.get(ln['speaker'], ln['speaker'])}「{ln['text']}」 | {ln['shape']} |")
+                first = False
+        out.append(f"\n參考圖：{'、'.join(page_refs(pg))}\n")
+        out.append('```')
+        out.append(page_body(pg))
+        out.append('```')
+    return "\n".join(out) + "\n"
+
+
+def episode_entry(plan, n, date, has_cover):
+    pages = []
+    if has_cover:
+        pages.append({'f': '00-cover.webp',
+                      'alt': f"第{_zh(n)}話封面：{plan['title']}"})
+    for pg in plan['pages']:
+        pages.append({'f': f"{pg['n']}.webp", 'alt': _page_alt(pg)})
+    return {'n': n, 'title': plan['title'], 'date': date, 'desc': plan['desc'],
+            'credit': '劇情與作畫：Claude × gpt-image-2', 'pages': pages}
+
+
+def pr_body(plan, n, wishes, wish_err=None):
+    """組 PR 內文。
+
+    `wish_err` 是 `fetch_wishes()` 回傳 tuple 的第二個值——「讀許願失敗」
+    跟「這次沒有人許願」是兩種完全不同的狀態,絕對不能混在一起顯示成同一句
+    「這次沒有許願」:社群如果真的寫了許願,只是這次讀取本身出錯(gh 沒
+    認證、API 壞掉……),顯示成「沒有許願」等於把那些許願直接吃掉,而且
+    沒有人會知道出過事。`wish_err` 非 None 時必須明講「讀許願失敗」與
+    原因,不能落到「沒有許願」那個分支。
+    """
+    kind = plan.get('kind') or '推進主線'
+    if wish_err is not None:
+        wish_line = f"讀許願失敗，不是沒有人許願：{wish_err}"
+    elif wishes:
+        wish_line = f"讀了 {len(wishes)} 則社群許願"
+    else:
+        wish_line = "這次沒有許願，由 AI 自己決定要畫什麼"
+    out = [f"# 第{_zh(n)}話：{plan['title']}\n",
+           f"**話型：{kind}**　" + wish_line + '\n',
+           plan['desc'] + '\n', '## 三個轉折\n']
+    out += [f'{i}. {b}' for i, b in enumerate(plan['beats'], 1)]
+    if wish_err is not None:
+        out.append('\n## 許願讀取失敗\n')
+        out.append(f'- {wish_err}')
+        out.append('\n社群這次可能真的有許願，但這一版沒讀到——'
+                   '合併前請人工查一下許願串，必要的話重跑一次。\n')
+    elif wishes:
+        out.append('\n## 這次讀到的社群許願\n')
+        out += [f'- {w}' for w in wishes]
+    out.append('\n## 逐頁對照\n')
+    out.append('**你要看的不是劇情，是圖有沒有照劇本畫。** '
+               '劇情在文字層通常沒問題，會出事的是「劇本寫的」跟「圖畫出來的」之間那道縫——'
+               '第二話里歐的「隱形只隱一半」就是分鏡完全正確、圖卻畫成一隻完整的橘貓，'
+               '整頁的笑點沒了，而讀分鏡檔案完全看不出來。\n')
+    for pg in plan['pages']:
+        out.append(f"\n### 第 {pg['n']} 頁\n")
+        out.append(f"![第 {pg['n']} 頁](../blob/HEAD/images/ep{n}/{pg['n']}.webp?raw=true)\n")
+        out.append('劇本說的：')
+        for pn in pg.get('panels') or []:
+            out.append(f"- {pn.get('pos', '')}｜{pn.get('scene', '')}")
+            for ln in pn.get('lines') or []:
+                out.append(f"  - {NAME.get(ln['speaker'], ln['speaker'])}"
+                           f"「{ln['text']}」（{ln['shape']}）")
+    out.append('\n---\n\n看過覺得沒問題就 merge，站上會自動更新。')
+    out.append('有哪一頁不對，關掉 PR 就好，下週會重新產一份。\n')
+    out.append('🤖 Generated with [Claude Code](https://claude.com/claude-code)')
+    return "\n".join(out)
+
+
 def generate_image(name, keys, body, out):
     """打 .11 的 codex-image-service,把圖存到 out。"""
     key = os.environ.get('CODEX_IMAGE_KEY', '')
