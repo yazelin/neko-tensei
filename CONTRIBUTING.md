@@ -195,6 +195,8 @@ PR 內文請附上那幾張圖（GitHub 可以直接貼），每張下面寫一�
 
 圖文採 [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/deed.zh-hant)。投稿即表示同意以此授權釋出，掛名會保留。
 
+程式碼（`build.py`、`scripts/`、workflow、樣板、CSS/JS）採 MIT，見 [LICENSE-CODE](LICENSE-CODE)。
+
 ## 還有問題
 
 開 [討論區](https://github.com/yazelin/neko-tensei/discussions) 問，或直接開 issue。
