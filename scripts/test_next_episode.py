@@ -88,6 +88,93 @@ class TestPrompt(unittest.TestCase):
             'SHOUT', 'OVAL', 'WEAK', 'TREMBLE', 'THOUGHT', 'DEMON', 'CAPTION'})
 
 
+class TestCastJsonIsTheSource(unittest.TestCase):
+    """設定資料的單一事實來源是 story/cast.json,prompt.py 只負責組裝。
+
+    分成兩份手寫的下場已經發生過:cast.json 寫「樹在爪上」,prompt.py 的
+    SHEET 跟著寫 tree above a paw,而正典上那個紋章既不是樹也沒有肉球,
+    模型很聽話地照錯的描述畫,通行證就漂了。
+    """
+
+    def setUp(self):
+        self.cast = json.loads(
+            (pathlib.Path(__file__).parent.parent / 'story' / 'cast.json').read_text('utf-8'))
+
+    def test_每個角色與道具的參考圖都在_REF_裡(self):
+        for k in list(self.cast['cast']) + list(self.cast['world']):
+            self.assertIn(k, prompt.REF, k)
+
+    def test_角色設定表逐句來自_cast_json(self):
+        for k, v in self.cast['cast'].items():
+            if v.get('sheet'):
+                self.assertIn(v['sheet'], prompt.SHEET, f'{k} 的 sheet 沒進 SHEET')
+
+    def test_紋章描述已修正(self):
+        # 錯的舊描述不能再出現在任何地方
+        self.assertNotIn('tree above a paw', prompt.SHEET)
+        # 正典是三顆圓球的紅色剪影,不是樹也沒有肉球
+        self.assertIn('three round balls', prompt.SHEET)
+        self.assertIn('NO paw print', prompt.SHEET)
+
+    def test_道具設定圖是乾淨的單一物件(self):
+        rel = self.cast['world']['pass']['ref']
+        p = pathlib.Path(__file__).parent.parent / rel
+        self.assertTrue(p.is_file(), rel)
+
+
+class TestWorldRefs(unittest.TestCase):
+    """道具與場景鎖。搬自 comic-studio 的 world 庫:分鏡指名 → prompt 帶設定
+    → 參考圖優先於角色附上去。沒有這一層,同一個道具每頁都會重抽一個樣子。
+    """
+
+    def test_帶道具時_prompt_有道具段(self):
+        p = prompt.build_prompt('01', ['style', 'pass', 'xiaobai'], 'x')
+        self.assertIn('PROPS AND PLACES', p)
+        self.assertIn('THE PASS', p)
+
+    def test_不帶道具時就沒有道具段(self):
+        p = prompt.build_prompt('01', ['style', 'xiaobai'], 'x')
+        self.assertNotIn('PROPS AND PLACES', p)
+
+    def test_道具段排在角色設定表之前(self):
+        # comic-studio 的順序:場景/道具決定這一格長什麼樣,角色是放進去的東西
+        p = prompt.build_prompt('01', ['style', 'pass', 'xiaobai'], 'x')
+        self.assertLess(p.index('PROPS AND PLACES'), p.index('CHARACTER SHEET'))
+
+    def test_page_refs_把道具排在角色前面(self):
+        page = {'n': '01', 'chars': ['xiaobai', 'uncle'], 'world': ['pass'], 'panels': []}
+        keys = ne.page_refs(page)
+        self.assertEqual(keys[0], 'style')
+        self.assertEqual(keys[1], 'pass')
+        self.assertLess(keys.index('pass'), keys.index('xiaobai'))
+
+    def test_page_refs_不認得的道具_id_直接忽略(self):
+        page = {'n': '01', 'chars': ['xiaobai'], 'world': ['不存在的東西'], 'panels': []}
+        self.assertNotIn('不存在的東西', ne.page_refs(page))
+
+    def test_page_refs_不超過上限(self):
+        page = {'n': '01',
+                'chars': ['xiaoniao', 'xiaobai', 'uncle', 'leo', 'kojiro'],
+                'world': ['pass'],
+                'panels': [{'pos': 'top', 'scene': 's',
+                            'lines': [{'speaker': 'xiaobai', 'shape': 'THOUGHT', 'text': 't'}]}]}
+        keys = ne.page_refs(page)
+        self.assertLessEqual(len(keys), ne.MAX_REFS)
+        # 被截掉的時候,畫風錨與道具鎖必須留著
+        self.assertIn('style', keys)
+        self.assertIn('pass', keys)
+
+    def test_企劃寫了不存在的道具_id_驗證器要擋(self):
+        p = _good_plan()
+        p['pages'][0]['world'] = ['不存在的東西']
+        errs = ne.validate_plan(p, 3, [])
+        self.assertTrue(any('道具' in e or 'world' in e for e in errs), errs)
+
+    def test_企劃沒寫_world_欄位也算合法(self):
+        # world 是選配,舊企劃不該因為少這個欄位就被擋下來
+        self.assertEqual(ne.validate_plan(_good_plan(), 3, ['我們怎麼變成貓了？！']), [])
+
+
 class TestWishes(unittest.TestCase):
     def test_挑出留言文字(self):
         payload = {'data': {'repository': {'discussions': {'nodes': [
