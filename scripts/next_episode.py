@@ -654,6 +654,61 @@ def generate_image(name, keys, body, out):
     print(f'  -> {name} ok {int(time.time() - t0)}s', flush=True)
 
 
+IMG_RETRIES = 3
+
+
+def cover_body(plan):
+    """封面的畫面描述。刻意不把標題烤進圖裡——文字進了圖,改一個字就是整張重生。
+
+    標題會出現在網頁上,不需要也不應該畫在封面裡。開頭那句反指令是要壓掉
+    prompt.BASE 寫死的「THREE horizontal panels」——封面是單張圖,而 body
+    排在整份 prompt 最後面,才蓋得掉前面的分鏡指令。
+    """
+    beats = '; '.join(plan.get('beats') or [])
+    return (f"A single dramatic cover illustration, NOT a multi-panel page, "
+            f"and with NO text, NO letters, NO title, NO watermark anywhere in the image.\n"
+            f"All five cats together in one heroic group composition: the MAGE CAT, "
+            f"the SWORDSMAN CAT, the SAMURAI CAT, the ROGUE CAT, and looming behind them "
+            f"the DEMON KING CAT.\n"
+            f"The mood and setting come from this episode: {plan.get('desc', '')}\n"
+            f"Key moments of the episode, use them to choose the setting and lighting: {beats}\n"
+            f"Portrait aspect ratio 2:3, same painterly vibrant anime fantasy style as "
+            f"reference image 1.")
+
+
+def generate_with_retry(name, keys, body, out):
+    """出圖失敗重試。服務端偶爾會回 502(內容重複偵測),再打一次通常就好。"""
+    last = None
+    for i in range(1, IMG_RETRIES + 1):
+        try:
+            generate_image(name, keys, body, out)
+            return
+        except Exception as e:                  # noqa: BLE001
+            last = e
+            print(f'  {name} 第 {i}/{IMG_RETRIES} 次失敗: {str(e)[:160]}', flush=True)
+            if i < IMG_RETRIES:
+                time.sleep(20)
+    raise RuntimeError(f'{name} 出圖連 {IMG_RETRIES} 次都失敗: {last}')
+
+
+def plan_with_retry(canon, wishes, titles, n):
+    """企劃不過就重試一次,再不過就放棄。
+
+    重試時不改 prompt——同一份 prompt 再擲一次,因為這是機率性輸出,
+    第一次不過通常不是 prompt 寫壞了。連兩次都不過才是真的有問題。
+    """
+    errs = []
+    for attempt in (1, 2):
+        plan = make_plan(canon, wishes)
+        errs = validate_plan(plan, n, titles)
+        if not errs:
+            return plan
+        print(f'企劃第 {attempt}/2 次沒過:')
+        for e in errs:
+            print(' -', e)
+    raise RuntimeError('企劃連兩次都沒過驗證:' + '；'.join(errs))
+
+
 def publish(plan, n, has_cover):
     """落檔:圖已經在 images/epN/ 了,這裡處理分鏡、episodes.json 與 build。"""
     (ROOT / 'story' / f'ep{n}.md').write_text(render_storyboard(plan, n), 'utf-8')
@@ -697,31 +752,41 @@ def main(argv=None):
 
     if a.plan_from:
         plan = json.loads(pathlib.Path(a.plan_from).read_text('utf-8'))
+        errs = validate_plan(plan, n, titles)
+        if errs:
+            print('企劃沒過驗證:')
+            for e in errs:
+                print(' -', e)
+            return 1
     else:
-        plan = make_plan(canon, wishes)
+        try:
+            plan = plan_with_retry(canon, wishes, titles, n)
+        except RuntimeError as e:
+            print(e)
+            return 1
         if a.plan_only:
             pathlib.Path(a.plan_only).write_text(
                 json.dumps(plan, ensure_ascii=False, indent=2), 'utf-8')
             print('企劃已存到', a.plan_only)
             return 0
-
-    errs = validate_plan(plan, n, titles)
-    if errs:
-        print('企劃沒過驗證:')
-        for e in errs:
-            print(' -', e)
-        return 1
     print('企劃通過驗證:', plan['title'])
 
     if a.dry_run:
         return 0
 
-    has_cover = False
+    cover_path = ROOT / f'images/ep{n}/00-cover.webp'
     if not a.skip_images:
+        # 社群投稿的封面永遠優先:已經有檔案就不要蓋掉
+        if not cover_path.is_file():
+            generate_with_retry('cover', ['style', 'xiaoniao', 'xiaobai', 'uncle',
+                                          'leo', 'kojiro'],
+                                cover_body(plan), cover_path)
+        else:
+            print('封面已存在,跳過(社群投稿優先)')
         for pg in plan['pages']:
-            out = ROOT / f'images/ep{n}' / f"{pg['n']}.webp"
-            generate_image(pg['n'], page_refs(pg), page_body(pg), out)
-        has_cover = (ROOT / f'images/ep{n}/00-cover.webp').is_file()
+            generate_with_retry(pg['n'], page_refs(pg), page_body(pg),
+                                ROOT / f'images/ep{n}' / f"{pg['n']}.webp")
+    has_cover = cover_path.is_file()
 
     publish(plan, n, has_cover)
     (ROOT / f'.pr-body-ep{n}.md').write_text(pr_body(plan, n, wishes, wish_err), 'utf-8')

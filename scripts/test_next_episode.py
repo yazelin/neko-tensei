@@ -703,6 +703,100 @@ class TestRender(unittest.TestCase):
         self.assertIn('訊息 \\| 收到了嗎', md)
 
 
+class TestCover(unittest.TestCase):
+    def test_封面描述帶進三個轉折(self):
+        b = ne.cover_body(_good_plan())
+        for beat in _good_plan()['beats']:
+            self.assertIn(beat, b)
+
+    def test_封面明確要求全員入鏡且無文字(self):
+        b = ne.cover_body(_good_plan())
+        self.assertIn('NO text', b)
+        self.assertIn('all five', b.lower())
+
+    def test_封面用的prompt不含對白規則(self):
+        p = prompt.build_prompt('cover', ['style'], ne.cover_body(_good_plan()))
+        self.assertNotIn('BALLOON SHAPES', p)
+
+    def test_封面要壓掉BASE的三格分鏡指令(self):
+        # BASE 寫死「THREE horizontal panels」,封面是單張圖。body 排在
+        # prompt 最後面,這句反指令必須在,不然模型會照 BASE 畫成三格。
+        p = prompt.build_prompt('cover', ['style'], ne.cover_body(_good_plan()))
+        self.assertIn('THREE horizontal panels', p)          # BASE 還在
+        self.assertIn('NOT a multi-panel page', p)           # 反指令也在
+        self.assertGreater(p.index('NOT a multi-panel page'),
+                           p.index('THREE horizontal panels'),
+                           '反指令必須排在 BASE 之後才蓋得掉')
+
+
+class TestRetry(unittest.TestCase):
+    def _with_fake_plan(self, fake):
+        orig = ne.make_plan
+        ne.make_plan = fake
+        self.addCleanup(setattr, ne, 'make_plan', orig)
+
+    def test_第一次就過就不重試(self):
+        calls = []
+        self._with_fake_plan(lambda canon, wishes: (calls.append(1), _good_plan())[1])
+        ne.plan_with_retry(ne.load_canon(), [], [], 3)
+        self.assertEqual(len(calls), 1)
+
+    def test_第一次不過會重試第二次(self):
+        calls = []
+
+        def fake(canon, wishes):
+            calls.append(1)
+            if len(calls) == 1:
+                bad = _good_plan()
+                bad['pages'] = bad['pages'][:3]
+                return bad
+            return _good_plan()
+
+        self._with_fake_plan(fake)
+        with redirect_stdout(io.StringIO()):
+            plan = ne.plan_with_retry(ne.load_canon(), [], [], 3)
+        self.assertEqual(len(calls), 2)
+        self.assertEqual(plan['title'], _good_plan()['title'])
+
+    def test_連兩次都不過就丟例外並帶上原因(self):
+        def fake(canon, wishes):
+            bad = _good_plan()
+            bad['pages'] = bad['pages'][:2]
+            return bad
+
+        self._with_fake_plan(fake)
+        with self.assertRaises(RuntimeError) as cm, redirect_stdout(io.StringIO()):
+            ne.plan_with_retry(ne.load_canon(), [], [], 3)
+        self.assertIn('六頁', str(cm.exception))
+
+    def test_出圖重試上限是三次(self):
+        self.assertEqual(ne.IMG_RETRIES, 3)
+
+    def test_出圖前兩次失敗第三次成功就算過(self):
+        calls = []
+
+        def fake(name, keys, body, out):
+            calls.append(1)
+            if len(calls) < 3:
+                raise RuntimeError('502 內容重複偵測')
+
+        with patch.object(ne, 'generate_image', fake), \
+                patch.object(ne.time, 'sleep'), redirect_stdout(io.StringIO()):
+            ne.generate_with_retry('01', ['style'], 'body', pathlib.Path('/tmp/unused.webp'))
+        self.assertEqual(len(calls), 3)
+
+    def test_出圖三次都失敗就丟例外並帶上最後一次原因(self):
+        def fake(name, keys, body, out):
+            raise RuntimeError('502 內容重複偵測')
+
+        with patch.object(ne, 'generate_image', fake), \
+                patch.object(ne.time, 'sleep'), redirect_stdout(io.StringIO()):
+            with self.assertRaises(RuntimeError) as cm:
+                ne.generate_with_retry('01', ['style'], 'body',
+                                       pathlib.Path('/tmp/unused.webp'))
+        self.assertIn('502', str(cm.exception))
+
+
 class TestMain(unittest.TestCase):
     """驅動腳本的旗標。
 
