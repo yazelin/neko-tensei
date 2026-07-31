@@ -23,8 +23,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: 裝相依（整條線唯一的 pip 套件）
-        run: pip install --quiet opencc-python-reimplemented
+      - name: 裝相依（整條線只有這兩個 pip 套件）
+        run: pip install --quiet opencc-python-reimplemented pillow
 
       - name: 確認沒有還開著的草稿 PR
         env:
