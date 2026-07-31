@@ -703,6 +703,36 @@ class TestRender(unittest.TestCase):
         self.assertIn('訊息 \\| 收到了嗎', md)
 
 
+class TestBaseUrlFallback(unittest.TestCase):
+    """base url 的環境變數是空字串時要退回內建預設。
+
+    workflow 把 ${{ secrets.X }} 塞進 env,secret 沒設時給的是空字串而不是
+    「沒這個變數」,os.environ.get 的第二參數救不到——URL 會組成
+    /v1beta/models/... 直接炸在 CI 上,而本機因為根本沒設那個變數,永遠
+    重現不出來。這個測試靠重新 import 模組來看模組層級的求值結果。
+    """
+
+    def _reimport_with(self, env):
+        import importlib
+        with patch.dict(os.environ, env):
+            return importlib.reload(ne)
+
+    def tearDown(self):
+        import importlib
+        importlib.reload(ne)          # 還原成乾淨環境下的模組狀態
+
+    def test_空字串要退回內建預設(self):
+        m = self._reimport_with({'GEMINI_WEB_BASE_URL': '', 'CODEX_IMAGE_BASE_URL': ''})
+        self.assertTrue(m.GEMINI_BASE.startswith('https://'), m.GEMINI_BASE)
+        self.assertTrue(m.IMG_BASE.startswith('https://'), m.IMG_BASE)
+
+    def test_有值時照用(self):
+        m = self._reimport_with({'GEMINI_WEB_BASE_URL': 'https://example.test/g',
+                                 'CODEX_IMAGE_BASE_URL': 'https://example.test/c'})
+        self.assertEqual(m.GEMINI_BASE, 'https://example.test/g')
+        self.assertEqual(m.IMG_BASE, 'https://example.test/c')
+
+
 class TestCover(unittest.TestCase):
     def test_封面描述帶進三個轉折(self):
         b = ne.cover_body(_good_plan())

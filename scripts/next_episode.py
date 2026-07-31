@@ -307,8 +307,11 @@ def validate_plan(plan, next_n, titles):
     return errs
 
 
-GEMINI_BASE = os.environ.get('GEMINI_WEB_BASE_URL', 'https://ching-tech.ddns.net/gemini-web')
-GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-2.5-flash')
+# 用 `or` 不用 get 的第二參數:workflow 把 ${{ secrets.X }} 塞進 env 時,
+# secret 不存在給的是空字串而不是「沒這個變數」,get 的預設值救不到,
+# base url 會變成 '' 讓 URL 組成 /v1beta/... 直接炸在 CI 上。
+GEMINI_BASE = os.environ.get('GEMINI_WEB_BASE_URL') or 'https://ching-tech.ddns.net/gemini-web'
+GEMINI_MODEL = os.environ.get('GEMINI_MODEL') or 'gemini-2.5-flash'
 
 _PLAN_SHAPE = """{
   "title": "不含「第N話」三個字的標題",
@@ -422,7 +425,7 @@ def make_plan(canon, wishes):
             f'LLM 回傳的不是合法 JSON:{e}。實際回傳內容前 300 字:{text[:300]}') from None
 
 
-IMG_BASE = os.environ.get('CODEX_IMAGE_BASE_URL', 'https://ching-tech.ddns.net/codex-image')
+IMG_BASE = os.environ.get('CODEX_IMAGE_BASE_URL') or 'https://ching-tech.ddns.net/codex-image'
 SPEAKER_REF = {'xiaoniao': 'xiaoniao', 'xiaobai': 'xiaobai',
                'uncle': 'uncle', 'leo': 'leo', 'kojiro': 'kojiro'}
 POS_LABEL = {'top': 'top', 'mid': 'middle', 'middle': 'middle', 'bottom': 'bottom'}
