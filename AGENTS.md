@@ -10,6 +10,21 @@
 
 這是這個專案花最多輪次打出來的東西。**光靠文字描述角色一定會漂。**
 
+做法已經包成技能：[cast-lock](https://github.com/yazelin/cast-lock-skill)。這個 repo 的角色設定在 [`story/cast.json`](story/cast.json)，直接可以跑：
+
+```bash
+# 組 prompt（含參考圖清單與逐項特徵）
+python3 ~/cast-lock-skill/build.py --cast story/cast.json --chars uncle,xiaobai --body panel.txt
+
+# 只印參考圖路徑,餵給生圖工具
+python3 ~/cast-lock-skill/build.py --cast story/cast.json --chars uncle,xiaobai --refs-only
+
+# 出圖後印驗收清單,逐項對照
+python3 ~/cast-lock-skill/check.py --cast story/cast.json --chars uncle,xiaobai
+```
+
+下面是這套做法背後的道理，值得讀一次再動手。
+
 ### 一定要傳角色設定圖當參考圖
 
 `story/refs/` 底下有六張，只有貓、沒有前世、沒有文字：
