@@ -761,9 +761,18 @@ class TestPlannerPrompt(unittest.TestCase):
         p = ne.build_planner_prompt(ne.load_canon(), ['想看貓咪泡溫泉'])
         self.assertIn('想看貓咪泡溫泉', p)
 
-    def test_沒有許願時明講沒有(self):
+    def test_沒有許願時明講由AI自己決定(self):
         p = ne.build_planner_prompt(ne.load_canon(), [])
-        self.assertIn('這次沒有社群許願', p)
+        self.assertIn('由你自己決定要畫什麼', p)
+
+    def test_prompt_列出四種話型(self):
+        p = ne.build_planner_prompt(ne.load_canon(), [])
+        for k in ['推進主線', '日常番', '烏龍', '角色刻畫']:
+            self.assertIn(k, p)
+
+    def test_prompt_明講不必每話推進主線(self):
+        p = ne.build_planner_prompt(ne.load_canon(), [])
+        self.assertIn('不必每一話都推進主線', p)
 
     def test_prompt_帶進七種框型(self):
         p = ne.build_planner_prompt(ne.load_canon(), [])
@@ -789,6 +798,7 @@ GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-2.5-flash')
 
 _PLAN_SHAPE = """{
   "title": "不含「第N話」三個字的標題",
+  "kind": "推進主線 | 日常番 | 烏龍 | 角色刻畫",
   "desc": "一到兩句,給網站 meta description 用",
   "beats": ["轉折一", "轉折二", "轉折三"],
   "pages": [
@@ -803,9 +813,21 @@ _PLAN_SHAPE = """{
 }"""
 
 
+EPISODE_KINDS = """這一話可以是下面任何一種，你自己選最適合的，不必每一話都推進主線：
+
+- **推進主線**：收伏筆、往黑塔走
+- **日常番**：不推進劇情，就是四貓在異世界過日子
+- **烏龍**：能力出包、誤會、雞飛狗跳
+- **角色刻畫**：挖某一位的性格或過去
+
+一年五十二話沒辦法每話都推伏筆，硬推會把線燒完。但不管哪一種，都不可以跟
+既有設定矛盾，角色性格也不能走鐘。"""
+
+
 def build_planner_prompt(canon, wishes):
     wish_block = ("社群這次的許願（要盡量收進去，收不進去的就留給以後）：\n"
-                  + "\n".join(f'- {w}' for w in wishes)) if wishes else '這次沒有社群許願，由你自由發揮。'
+                  + "\n".join(f'- {w}' for w in wishes)) if wishes else \
+        '這次沒有社群許願，由你自己決定要畫什麼。'
     return f"""你是《轉生成貓貓的我們》的編劇。請企劃第 {canon['next_n']} 話。
 
 這部作品的創作規範（必須遵守）：
@@ -819,6 +841,8 @@ def build_planner_prompt(canon, wishes):
 ────────
 
 {wish_block}
+
+{EPISODE_KINDS}
 
 請輸出**純 JSON**，不要 markdown 圍籬、不要任何說明文字。格式：
 {_PLAN_SHAPE}
@@ -865,7 +889,7 @@ def make_plan(canon, wishes):
 cd ~/neko-tensei && python3 -m unittest discover -s scripts -p 'test_*.py' 2>&1 | tail -3
 ```
 
-Expected：`OK`，34 個測試通過。
+Expected：`OK`，36 個測試通過。
 
 - [ ] **Step 5: Commit**
 
@@ -1100,6 +1124,15 @@ class TestRender(unittest.TestCase):
     def test_PR內文列出許願並說明有沒有收進去(self):
         b = ne.pr_body(_good_plan(), 3, ['想看貓咪泡溫泉'])
         self.assertIn('想看貓咪泡溫泉', b)
+        self.assertIn('讀了 1 則社群許願', b)
+
+    def test_PR內文標出話型(self):
+        p = _good_plan(); p['kind'] = '日常番'
+        self.assertIn('話型：日常番', ne.pr_body(p, 3, []))
+
+    def test_沒有許願時PR內文要講明(self):
+        b = ne.pr_body(_good_plan(), 3, [])
+        self.assertIn('由 AI 自己決定', b)
 
     def test_PR內文提醒要看的是圖有沒有照劇本畫(self):
         b = ne.pr_body(_good_plan(), 3, [])
@@ -1173,8 +1206,11 @@ def episode_entry(plan, n, date, has_cover):
 
 
 def pr_body(plan, n, wishes):
-    out = [f"# 第{_zh(n)}話：{plan['title']}\n", plan['desc'] + '\n',
-           '## 三個轉折\n']
+    kind = plan.get('kind') or '推進主線'
+    out = [f"# 第{_zh(n)}話：{plan['title']}\n",
+           f"**話型：{kind}**　"
+           + (f"讀了 {len(wishes)} 則社群許願" if wishes else "這次沒有許願，由 AI 自己決定要畫什麼")
+           + '\n', plan['desc'] + '\n', '## 三個轉折\n']
     out += [f'{i}. {b}' for i, b in enumerate(plan['beats'], 1)]
     if wishes:
         out.append('\n## 這次讀到的社群許願\n')
@@ -1205,7 +1241,7 @@ def pr_body(plan, n, wishes):
 cd ~/neko-tensei && python3 -m unittest discover -s scripts -p 'test_*.py' 2>&1 | tail -3
 ```
 
-Expected：`OK`，48 個測試通過。
+Expected：`OK`，52 個測試通過。
 
 - [ ] **Step 5: Commit**
 
@@ -1361,7 +1397,7 @@ if __name__ == '__main__':
 cd ~/neko-tensei && python3 -m unittest discover -s scripts -p 'test_*.py' 2>&1 | tail -3
 ```
 
-Expected：`OK`，50 個測試通過。
+Expected：`OK`，54 個測試通過。
 
 - [ ] **Step 5: 真的出一次企劃（本機端到端，打 gemini-web）**
 
@@ -1628,7 +1664,7 @@ def plan_with_retry(canon, wishes, titles, n):
 cd ~/neko-tensei && python3 -m unittest discover -s scripts -p 'test_*.py' 2>&1 | tail -3
 ```
 
-Expected：`OK`，58 個測試通過。
+Expected：`OK`，62 個測試通過。
 
 - [ ] **Step 6: 確認 `--plan-from --dry-run` 還是好的**
 
