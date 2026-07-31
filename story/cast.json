@@ -1,0 +1,80 @@
+{
+  "_": "cast-lock 技能用的角色設定。https://github.com/yazelin/cast-lock-skill",
+  "root": "..",
+  "style_ref": {
+    "path": "images/ep1/07.webp",
+    "desc": "the finished page 1 art style, inking and hand-lettered bold Chinese type"
+  },
+  "cast": {
+    "xiaoniao": {
+      "name": "小鳥不啾",
+      "ref": "story/refs/xiaoniao.webp",
+      "desc": "MAGE CAT model sheet",
+      "must": [
+        "長毛褐灰緬因貓、琥珀眼",
+        "圓形細金框眼鏡,臉上一定看得到",
+        "深藍金邊法袍",
+        "頂端大藍寶石的金法杖",
+        "法杖上停一隻鳥、頭頂左側停一隻鳥(品種顏色配件每頁可以不同,牠們從不張嘴)"
+      ],
+      "must_not": []
+    },
+    "xiaobai": {
+      "name": "小白++",
+      "ref": "story/refs/xiaobai.webp",
+      "desc": "SWORDSMAN CAT model sheet",
+      "must": [
+        "年輕虎斑貓、大琥珀眼露虎牙",
+        "銀色板甲加皮帶扣",
+        "紅圍巾披風"
+      ],
+      "must_not": ["頭帶或任何帽子(必勝頭帶是他前世限定,貓形頭上是空的)"]
+    },
+    "uncle": {
+      "name": "中年攻城屍",
+      "ref": "story/refs/uncle.webp",
+      "desc": "SAMURAI CAT model sheet",
+      "must": [
+        "白虎斑貓、藍眼、中年臉",
+        "深藍漆武士鎧、紅繩腰帶",
+        "胸前圓形金牌刻著一個「貓」字"
+      ],
+      "must_not": []
+    },
+    "leo": {
+      "name": "里歐",
+      "ref": "story/refs/leo.webp",
+      "desc": "ROGUE CAT model sheet",
+      "must": ["橘虎斑貓、褐眼賊笑", "黑色連帽斗篷上滿是金色肉球扣"],
+      "must_not": []
+    },
+    "kojiro": {
+      "name": "荒坂小次郎",
+      "ref": "story/refs/kojiro.webp",
+      "desc": "DEMON KING CAT model sheet",
+      "must": [
+        "巨大暗棕色長毛貓、發光紅眼",
+        "黑紅披風、粗金鎖鍊",
+        "圓形紅色紋章(樹在爪上)"
+      ],
+      "must_not": ["雲朵狀的內心 OS 思考框(他沒有前世可以浮出來)"]
+    },
+    "past": {
+      "name": "四位主角的前世人形",
+      "ref": "story/refs/past-four.webp",
+      "desc": "model sheet of the four heroes FORMER HUMAN SELVES, left to right: mage / swordsman / samurai / rogue",
+      "must": [
+        "小鳥不啾前世:黑長髮低馬尾、圓眼鏡、左耳上方一枚白色小鳥髮夾、掛識別證",
+        "小白++前世:黑色刺蝟頭、白頭帶上兩個紅色「必勝」、連帽衫、張嘴吼叫爆汗",
+        "中年攻城屍前世:壯碩中年、黑短髮有鬍碴、黑T、粗金鍊、環胸(不是胖子也不是光頭)",
+        "里歐前世:淺金髮、黑襯衫、拿冒煙的咖啡杯"
+      ],
+      "must_not": ["彩色(前世永遠是黑白灰階配霓虹藍光)"]
+    }
+  },
+  "global_rules": [
+    "前世的記憶泡一律黑白灰階配霓虹光,貓世界全彩,這個對比是刻意的",
+    "對話框形狀要跟著情緒走,整頁都是圓角矩形就是錯的",
+    "畫面裡唯一允許的框外文字是中年攻城屍金牌上那個「貓」字"
+  ]
+}

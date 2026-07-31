@@ -8,7 +8,24 @@
 
 ## 生圖時角色會跑偏——解法
 
-這是這個專案花最多輪次打出來的東西。**光靠文字描述角色一定會漂。**
+**先講最重要的一句：要傳參考圖。** 只把文字 prompt 丟給生圖工具，角色一定會漂——金牌上的字不見、憑空多一頂帽子、前世人形整組畫錯。這不是 prompt 寫得不夠詳細的問題，文字描述本身就不夠。
+
+而且你的生圖後端**必須支援多張參考圖的 image-edit 模式**。純文字生圖（text-to-image）用不了這套做法。
+
+做法已經包成技能：[cast-lock](https://github.com/yazelin/cast-lock-skill)。這個 repo 的角色設定在 [`story/cast.json`](story/cast.json)，直接可以跑：
+
+```bash
+# 組 prompt（含參考圖清單與逐項特徵）
+python3 ~/cast-lock-skill/build.py --cast story/cast.json --chars uncle,xiaobai --body panel.txt
+
+# 只印參考圖路徑,餵給生圖工具
+python3 ~/cast-lock-skill/build.py --cast story/cast.json --chars uncle,xiaobai --refs-only
+
+# 出圖後印驗收清單,逐項對照
+python3 ~/cast-lock-skill/check.py --cast story/cast.json --chars uncle,xiaobai
+```
+
+下面是這套做法背後的道理，值得讀一次再動手。
 
 ### 一定要傳角色設定圖當參考圖
 
@@ -141,6 +158,8 @@ python3 -B -m unittest discover -s scripts -p 'test_*.py'
 
 | 檔案 | 內容 |
 |---|---|
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | 協作手冊：投一張圖／畫一整話／加新角色，三條路的完整步驟 |
+| [`story/cast.json`](story/cast.json) | 角色設定的機器可讀版本，給 [cast-lock](https://github.com/yazelin/cast-lock-skill) 用 |
 | [`story/README.md`](story/README.md) | 創作規範正本：分工、鐵律、角色特徵、框型表 |
 | `story/epN.md` | 每一話的逐頁分鏡與生圖 prompt |
 | [`NEXT.md`](NEXT.md) | 下一步與技術債 |
