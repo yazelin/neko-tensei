@@ -142,13 +142,13 @@
     // 有對應的 epN.html 連結才算),頁碼要是非負整數,文字一律 textContent。
     var ep = prog.ep, page = prog.page;
     if (!isIndex(ep) || ep < 1 || !isIndex(page)) return;
-    if (!document.querySelector('a[href="ep' + ep + '.html"]')) return;
+    if (!document.querySelector('a[href="ep/' + ep + '.html"]')) return;
 
     var CN = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
     var where = page === 0 ? '封面' : '第 ' + page + ' 頁';
     var card = document.createElement('a');
     card.className = 'resume';
-    card.href = 'ep' + ep + '.html#p' + page;
+    card.href = 'ep/' + ep + '.html#p' + page;
 
     var ic = document.createElement('span');
     ic.className = 'resume-ic';
@@ -203,11 +203,24 @@
     io.observe(el);
   }
 
+  /* Service worker 註冊。站根從 manifest 的位置推算——manifest 一定在根,
+     所以不管這一頁在根還是在 ep/ 或 char/ 底下都算得出來。
+     頁面各自寫死 './sw.js' 的話,子目錄頁會去要 /ep/sw.js 然後 404。 */
+  function initSW() {
+    if (!('serviceWorker' in navigator)) return;
+    var m = document.querySelector('link[rel="manifest"]');
+    if (!m) return;
+    var root = new URL('.', m.href).href;
+    navigator.serviceWorker.register(root + 'sw.js', { scope: root })
+      .catch(function () { /* 註冊失敗不影響閱讀 */ });
+  }
+
   function boot() {
     var reader = document.querySelector('main.reader');
     if (reader) initReader(reader);
     else initShell();
     initGiscus();
+    initSW();
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);

@@ -63,6 +63,10 @@ async function newPage(ctx) {
   page.on('console', m => {
     if (m.type() === 'error') consoleErrors.push('console: ' + m.text());
   });
+  // 只印訊息看不出是哪個檔 404,把 URL 也記下來
+  page.on('response', r => {
+    if (r.status() === 404) consoleErrors.push('404: ' + r.url());
+  });
   return page;
 }
 
@@ -71,7 +75,11 @@ async function newPage(ctx) {
 async function injectInsets(page) {
   await page.addInitScript(inset => {
     var apply = function () {
-      fetch('./style.css').then(function (r) { return r.text(); }).then(function (css) {
+      // 從頁面上實際的 <link> 取,不要寫死 './style.css'——
+      // 子目錄頁(ep/、char/)會把它解析成 /ep/style.css 然後 404。
+      var link = document.querySelector('link[rel="stylesheet"]');
+      if (!link) return;
+      fetch(link.href).then(function (r) { return r.text(); }).then(function (css) {
         var s = document.createElement('style');
         s.id = '__insets';
         s.textContent = css.replace(
@@ -101,7 +109,7 @@ async function main() {
     check('首頁載入', title.includes('轉生成貓貓的我們'), title);
 
     // ── 檢查:閱讀頁每張圖有 id,且手機上滿版 ──
-    await page.goto(BASE + '/ep2.html');
+    await page.goto(BASE + '/ep/2.html');
     const ids = await page.$$eval('main.reader img', els => els.map(e => e.id));
     check('閱讀頁圖片有 id', ids.length === 7 && ids[0] === 'p0' && ids[6] === 'p6', ids.join(','));
 
@@ -120,7 +128,7 @@ async function main() {
     check('閱讀頁沒有 tabbar', (await page.$('.tabbar')) === null);
 
     // ── 檢查:閱讀頁頂欄固定且自動隱現 ──
-    await page.goto(BASE + '/ep2.html');
+    await page.goto(BASE + '/ep/2.html');
     const topBox0 = await page.$eval('.reader-top', e => e.getBoundingClientRect().top);
     check('頂欄一開始可見', Math.abs(topBox0) < 1, String(topBox0));
 
@@ -135,7 +143,7 @@ async function main() {
     check('往上捲頂欄滑回', Math.abs(topBox2) < 1, String(topBox2));
 
     // ── 檢查:進度條頁碼跟著實際看到的那張圖走 ──
-    await page.goto(BASE + '/ep2.html');
+    await page.goto(BASE + '/ep/2.html');
     await page.waitForTimeout(300);
     check('進度條初始為 1/7', (await page.textContent('.progress > span')) === '1/7',
       await page.textContent('.progress > span'));
@@ -151,7 +159,7 @@ async function main() {
       await page.textContent('.progress > span'));
 
     // ── 檢查:進度寫進 localStorage,且 key 有 nt- 前綴 ──
-    await page.goto(BASE + '/ep2.html');
+    await page.goto(BASE + '/ep/2.html');
     await page.evaluate(() => {
       const el = document.getElementById('p3');
       window.scrollTo(0, el.offsetTop + el.offsetHeight / 2 - innerHeight / 2);
@@ -246,7 +254,7 @@ async function main() {
     // ── 檢查:角色頁的「關於」要導到首頁的誕生故事,不是死連結 ──
     // 舊寫法用 location.hash = '#origin',但 char-*.html 沒有 id="origin",
     // 點下去網址變成 char-kojiro.html#origin,畫面毫無反應。
-    await page.goto(BASE + '/char-kojiro.html');
+    await page.goto(BASE + '/char/kojiro.html');
     await page.waitForTimeout(300);
     await Promise.all([
       page.waitForNavigation({ waitUntil: 'load' }),
@@ -271,7 +279,7 @@ async function main() {
     await page.reload();
     await page.waitForTimeout(300);
     const href = await page.getAttribute('.resume', 'href');
-    check('繼續閱讀連到正確位置', /ep2\.html#p3$/.test(href || ''), String(href));
+    check('繼續閱讀連到正確位置', /ep\/2\.html#p3$/.test(href || ''), String(href));
 
     await page.click('.resume');
     await page.waitForTimeout(600);
@@ -282,7 +290,7 @@ async function main() {
     check('跳轉落在 p3 上緣', landedOffset < 80, String(landedOffset));
 
     // ── 檢查:繼續閱讀卡只在首頁,角色頁不能出現(即使有紀錄) ──
-    await page.goto(BASE + '/char-kojiro.html');
+    await page.goto(BASE + '/char/kojiro.html');
     await page.waitForTimeout(300);
     check('角色頁不顯示繼續閱讀', (await page.$('.resume')) === null);
 
@@ -325,7 +333,7 @@ async function main() {
     const pageI = await newPage(ctxI);
     await injectInsets(pageI);
 
-    await pageI.goto(BASE + '/ep2.html');
+    await pageI.goto(BASE + '/ep/2.html');
     await pageI.waitForFunction(() => !!document.getElementById('__insets'));
     await pageI.waitForTimeout(200);
     const pr = await pageI.$eval('.progress', e => {
@@ -370,7 +378,7 @@ async function main() {
     const ctxNoJs = await browser.newContext({ ...devices['iPhone 13'] });
     await ctxNoJs.route('**/app.js', r => r.abort());
     const pageN = await ctxNoJs.newPage();
-    await pageN.goto(BASE + '/ep2.html');
+    await pageN.goto(BASE + '/ep/2.html');
     await pageN.waitForTimeout(200);
     const barNoJs = await pageN.$eval('.progress > i', e => e.getBoundingClientRect().width);
     check('沒有 JS 時進度條不顯示假進度', barNoJs < 1, `${barNoJs}px`);
@@ -395,7 +403,7 @@ async function main() {
     const afterScroll = await page.$$eval('script[src*="giscus.app"]', els => els.length);
     check('捲到才載入 giscus', afterScroll === 1, String(afterScroll));
 
-    await page.goto(BASE + '/ep2.html');
+    await page.goto(BASE + '/ep/2.html');
     await page.waitForTimeout(300);
     const gis2 = await page.$eval('#giscus', e => ({
       cat: e.dataset.categoryId, map: e.dataset.mapping, term: e.dataset.term || ''
