@@ -484,5 +484,50 @@ class TestCallLLMErrors(unittest.TestCase):
         self.assertIn('這不是 JSON', str(cm.exception))
 
 
+class TestPageBody(unittest.TestCase):
+    def test_翻成PANEL段落並帶上框型(self):
+        page = {'n': '01', 'chars': ['xiaobai'], 'panels': [
+            {'pos': 'top', 'scene': 'four cats on a hill',
+             'lines': [{'speaker': 'xiaobai', 'shape': 'SHOUT', 'text': '出發！'}]}]}
+        b = ne.page_body(page)
+        self.assertIn('PANEL 1 (top): four cats on a hill', b)
+        self.assertIn('SHOUT BALLOON', b)
+        self.assertIn('出發！', b)
+
+    def test_參考圖第一張永遠是畫風(self):
+        page = {'n': '01', 'chars': ['leo', 'uncle'], 'panels': []}
+        self.assertEqual(ne.page_refs(page)[0], 'style')
+
+    def test_出場角色都被帶進參考圖(self):
+        page = {'n': '01', 'chars': ['leo', 'uncle'], 'panels': []}
+        keys = ne.page_refs(page)
+        self.assertIn('leo', keys)
+        self.assertIn('uncle', keys)
+
+    def test_參考圖不重複(self):
+        page = {'n': '01', 'chars': ['leo', 'leo', 'style'], 'panels': []}
+        keys = ne.page_refs(page)
+        self.assertEqual(len(keys), len(set(keys)))
+
+    def test_有記憶泡才帶前世設定圖(self):
+        with_os = {'n': '04', 'chars': ['uncle'], 'panels': [
+            {'pos': 'bottom', 'scene': 'x',
+             'lines': [{'speaker': 'uncle', 'shape': 'THOUGHT', 'text': '這不就是 code review。'}]}]}
+        without = {'n': '01', 'chars': ['uncle'], 'panels': [
+            {'pos': 'top', 'scene': 'x',
+             'lines': [{'speaker': 'uncle', 'shape': 'OVAL', 'text': '哼。'}]}]}
+        self.assertIn('past', ne.page_refs(with_os))
+        self.assertNotIn('past', ne.page_refs(without))
+
+    def test_組出來的prompt包含這一頁的對白(self):
+        import prompt as pr
+        page = {'n': '01', 'chars': ['xiaobai'], 'panels': [
+            {'pos': 'top', 'scene': 'x',
+             'lines': [{'speaker': 'xiaobai', 'shape': 'SHOUT', 'text': '出發！'}]}]}
+        p = pr.build_prompt('01', ne.page_refs(page), ne.page_body(page))
+        self.assertIn('出發！', p)
+        self.assertIn('FINAL CHECK', p)
+
+
 if __name__ == '__main__':
     unittest.main()
