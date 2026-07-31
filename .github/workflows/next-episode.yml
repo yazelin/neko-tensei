@@ -93,10 +93,14 @@ jobs:
             --body-file ".pr-body-ep$N.md" \
             --label auto-episode
 
-      # 只在失敗時存。成功的話 publish 已經把圖 commit 進 PR 了,再留一份
-      # 快取只會讓下一話誤撿到上一話的殘骸。
+      # 成功時不存:publish 已經把圖 commit 進 PR 了,再留一份快取只會讓下一話
+      # 誤撿到上一話的殘骸。
+      #
+      # 失敗**和取消**都要存。cancelled() 那半邊很容易漏——GitHub Actions 的
+      # if: failure() 在取消時不會執行,而人按 Cancel 的時候那些圖已經燒掉了,
+      # 一樣該留著。開 issue 則只在真的失敗時做:人自己按的取消不需要通知自己。
       - name: 存下沒跑完的進度
-        if: failure()
+        if: failure() || cancelled()
         uses: actions/cache/save@v4
         with:
           path: |
