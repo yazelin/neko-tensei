@@ -5,11 +5,14 @@
 """
 import io
 import json
+import os
 import pathlib
 import re
 import subprocess
 import sys
+import tempfile
 import unittest
+from contextlib import redirect_stdout
 from unittest.mock import patch
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
@@ -588,7 +591,9 @@ class TestGenerateImageMalformedResponse(unittest.TestCase):
             self._urlopen_returning({'id': 'job-1'}),
             self._urlopen_returning({'status': 'succeeded'}),
         ]
-        with self.assertRaises(RuntimeError) as cm:
+        # generate_image 拿到 job id 就會印一行進度,這裡吞掉它,不然測試
+        # 輸出裡會冒出一行沒頭沒尾的「job 01 job-1」。
+        with self.assertRaises(RuntimeError) as cm, redirect_stdout(io.StringIO()):
             ne.generate_image('01', ['style'], 'body', pathlib.Path('/tmp/unused.png'))
         self.assertIn('images', str(cm.exception))
 
@@ -696,6 +701,59 @@ class TestRender(unittest.TestCase):
                          f'對白裡的 | 沒被跳脫,表格列被切成了 {len(unescaped) - 1} 欄:{line}')
         # 跳脫後的內容還是要看得到原本的對白,不能整段被吃掉。
         self.assertIn('訊息 \\| 收到了嗎', md)
+
+
+class TestMain(unittest.TestCase):
+    """驅動腳本的旗標。
+
+    fetch_wishes 一律 patch 掉:那支會叫 `gh` 打 GitHub,單元測試不該
+    需要網路、也不該因為許願串的內容變了就紅。這裡要驗的是旗標的
+    分流,不是讀許願——那個 TestWishes 已經驗過了。
+    """
+
+    def _run(self, argv, plan):
+        with tempfile.NamedTemporaryFile('w', suffix='.json', delete=False,
+                                         encoding='utf-8') as f:
+            json.dump(plan, f)
+            path = f.name
+        self.addCleanup(os.unlink, path)
+        buf = io.StringIO()
+        with patch.object(ne, 'fetch_wishes', return_value=([], None)), \
+                redirect_stdout(buf):
+            rc = ne.main(argv + ['--plan-from', path])
+        return rc, buf.getvalue()
+
+    def test_plan_from_搭配_dry_run_不碰任何檔案(self):
+        before = _tree_snapshot()
+        rc, out = self._run(['--dry-run'], _good_plan())
+        self.assertEqual(rc, 0, out)
+        self.assertIn('企劃通過驗證', out)
+        self.assertEqual(_tree_snapshot(), before, '--dry-run 動到了 repo 裡的檔案')
+
+    def test_壞企劃會讓程式回非零並印出原因(self):
+        bad = _good_plan()
+        bad['pages'][0]['panels'][0]['lines'][0]['text'] = '这个世界'
+        rc, out = self._run(['--dry-run'], bad)
+        self.assertEqual(rc, 1)
+        self.assertIn('簡體', out)
+
+
+def _tree_snapshot():
+    """repo 裡「pipeline 會寫到」的那些檔案的 (路徑, mtime, 大小)。
+
+    整個 repo 走一遍太慢也太吵(__pycache__、.git 都會動),只盯落檔那一步
+    真的會碰的目標。
+    """
+    root = pathlib.Path(ne.ROOT)
+    targets = [root / 'episodes.json', root / 'sw.js', root / 'story', root / 'ep']
+    snap = []
+    for t in targets:
+        paths = sorted(t.rglob('*')) if t.is_dir() else [t]
+        for p in paths:
+            if p.is_file():
+                st = p.stat()
+                snap.append((str(p), st.st_mtime_ns, st.st_size))
+    return snap
 
 
 if __name__ == '__main__':

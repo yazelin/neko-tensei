@@ -61,7 +61,7 @@
   - `SHAPES: set[str]` — 七種合法框型的名稱
   - `NO_TEXT: set[str]` — 不帶對白與對話框的頁名（`kojiro`、`cover`）
 
-- [ ] **Step 1: 寫失敗的測試**
+- [x] **Step 1: 寫失敗的測試**
 
 建立 `scripts/test_next_episode.py`：
 
@@ -126,7 +126,7 @@ if __name__ == '__main__':
     unittest.main()
 ```
 
-- [ ] **Step 2: 跑測試確認失敗**
+- [x] **Step 2: 跑測試確認失敗**
 
 ```bash
 cd ~/neko-tensei && python3 -m unittest discover -s scripts -p 'test_*.py' 2>&1 | tail -5
@@ -134,7 +134,7 @@ cd ~/neko-tensei && python3 -m unittest discover -s scripts -p 'test_*.py' 2>&1 
 
 Expected：`ModuleNotFoundError: No module named 'prompt'`
 
-- [ ] **Step 3: 建立 `scripts/prompt.py`**
+- [x] **Step 3: 建立 `scripts/prompt.py`**
 
 ```python
 #!/usr/bin/env python3
@@ -217,7 +217,7 @@ def build_prompt(name, keys, body):
     return out
 ```
 
-- [ ] **Step 4: 跑測試確認通過**
+- [x] **Step 4: 跑測試確認通過**
 
 ```bash
 cd ~/neko-tensei && python3 -m unittest discover -s scripts -p 'test_*.py' 2>&1 | tail -3
@@ -225,7 +225,7 @@ cd ~/neko-tensei && python3 -m unittest discover -s scripts -p 'test_*.py' 2>&1 
 
 Expected：`OK`，8 個測試通過。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add scripts/prompt.py scripts/test_next_episode.py
@@ -248,7 +248,7 @@ pipeline 要知道「已經出到第幾話、前面發生過什麼、有哪些�
   - `ROOT: pathlib.Path` — repo 根目錄
   - `load_canon() -> dict`，鍵為 `next_n`（int，下一話話數）、`episodes`（list，episodes.json 的 episodes）、`rules`（str，story/README.md 全文）、`recent`（str，最近兩話的分鏡全文）
 
-- [ ] **Step 1: 加失敗的測試**
+- [x] **Step 1: 加失敗的測試**
 
 在 `scripts/test_next_episode.py` 的 `if __name__` 之前加：
 
@@ -277,7 +277,7 @@ class TestCanon(unittest.TestCase):
         self.assertEqual(len(ns), len(set(ns)))
 ```
 
-- [ ] **Step 2: 跑測試確認失敗**
+- [x] **Step 2: 跑測試確認失敗**
 
 ```bash
 cd ~/neko-tensei && python3 -m unittest discover -s scripts -p 'test_*.py' 2>&1 | tail -3
@@ -285,7 +285,7 @@ cd ~/neko-tensei && python3 -m unittest discover -s scripts -p 'test_*.py' 2>&1 
 
 Expected：`ModuleNotFoundError: No module named 'next_episode'`
 
-- [ ] **Step 3: 建立 `scripts/next_episode.py` 的骨架與 `load_canon`**
+- [x] **Step 3: 建立 `scripts/next_episode.py` 的骨架與 `load_canon`**
 
 ```python
 #!/usr/bin/env python3
@@ -322,7 +322,7 @@ def load_canon():
     }
 ```
 
-- [ ] **Step 4: 跑測試確認通過**
+- [x] **Step 4: 跑測試確認通過**
 
 ```bash
 cd ~/neko-tensei && python3 -m unittest discover -s scripts -p 'test_*.py' 2>&1 | tail -3
@@ -330,7 +330,7 @@ cd ~/neko-tensei && python3 -m unittest discover -s scripts -p 'test_*.py' 2>&1 
 
 Expected：`OK`，11 個測試通過。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add scripts/next_episode.py scripts/test_next_episode.py
@@ -355,7 +355,7 @@ git commit -m "feat(pipeline): 讀 canon——已出的話、創作規範、最�
   - `parse_wishes(payload: dict) -> list[str]` — 純函式，從 GraphQL 回應挑出留言文字
   - `fetch_wishes() -> tuple[list[str], str | None]` — 回（許願清單, 失敗原因）。討論串還不存在是正常的，回 `([], None)`；`gh` 真的失敗才回 `([], '原因')`
 
-- [ ] **Step 1: 加失敗的測試**
+- [x] **Step 1: 加失敗的測試**
 
 在 `scripts/test_next_episode.py` 加：
 
@@ -396,7 +396,7 @@ class TestWishes(unittest.TestCase):
         self.assertEqual(ne.parse_wishes(payload), ['有效的許願'])
 ```
 
-- [ ] **Step 2: 跑測試確認失敗**
+- [x] **Step 2: 跑測試確認失敗**
 
 ```bash
 cd ~/neko-tensei && python3 -m unittest discover -s scripts -p 'test_*.py' 2>&1 | tail -3
@@ -404,7 +404,7 @@ cd ~/neko-tensei && python3 -m unittest discover -s scripts -p 'test_*.py' 2>&1 
 
 Expected：`AttributeError: module 'next_episode' has no attribute 'parse_wishes'`
 
-- [ ] **Step 3: 實作**
+- [x] **Step 3: 實作**
 
 在 `scripts/next_episode.py` 的 `load_canon` 之後加：
 
@@ -458,7 +458,7 @@ def fetch_wishes():
         return []
 ```
 
-- [ ] **Step 4: 跑測試確認通過**
+- [x] **Step 4: 跑測試確認通過**
 
 ```bash
 cd ~/neko-tensei && python3 -m unittest discover -s scripts -p 'test_*.py' 2>&1 | tail -3
@@ -466,7 +466,7 @@ cd ~/neko-tensei && python3 -m unittest discover -s scripts -p 'test_*.py' 2>&1 
 
 Expected：`OK`，16 個測試通過。
 
-- [ ] **Step 5: 實際打一次 GitHub 確認接線**
+- [x] **Step 5: 實際打一次 GitHub 確認接線**
 
 ```bash
 cd ~/neko-tensei && python3 -c "
@@ -479,7 +479,7 @@ print('許願則數:', len(w))
 
 Expected：`許願則數: 0`（現在還沒有人留言，這正是要驗的——不存在時不會炸）。
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add scripts/next_episode.py scripts/test_next_episode.py
@@ -502,7 +502,7 @@ LLM 出的企劃在花掉出圖額度之前，要先被一組不會妥協的規�
   - `has_simplified(text: str) -> str | None` — 回第一個踩到的簡體字，沒有就回 `None`
   - `validate_plan(plan: dict, next_n: int, titles: list[str]) -> list[str]` — 回問題清單，空清單代表通過
 
-- [ ] **Step 1: 加失敗的測試**
+- [x] **Step 1: 加失敗的測試**
 
 在 `scripts/test_next_episode.py` 加：
 
@@ -625,7 +625,7 @@ class TestValidate(unittest.TestCase):
         self.assertTrue(any('對白' in e for e in errs), errs)
 ```
 
-- [ ] **Step 2: 跑測試確認失敗**
+- [x] **Step 2: 跑測試確認失敗**
 
 ```bash
 cd ~/neko-tensei && python3 -m unittest discover -s scripts -p 'test_*.py' 2>&1 | tail -3
@@ -633,7 +633,7 @@ cd ~/neko-tensei && python3 -m unittest discover -s scripts -p 'test_*.py' 2>&1 
 
 Expected：`AttributeError: module 'next_episode' has no attribute 'has_simplified'`
 
-- [ ] **Step 3: 實作**
+- [x] **Step 3: 實作**
 
 在 `scripts/next_episode.py` 頂端加 `import prompt`（放在 `import pathlib` 之後、`ROOT` 之前，並先 `import sys; sys.path.insert(0, str(pathlib.Path(__file__).parent))`），然後在 `fetch_wishes` 之後加：
 
@@ -737,7 +737,7 @@ def validate_plan(plan, next_n, titles):
     return errs
 ```
 
-- [ ] **Step 4: 跑測試確認通過**
+- [x] **Step 4: 跑測試確認通過**
 
 ```bash
 cd ~/neko-tensei && python3 -m unittest discover -s scripts -p 'test_*.py' 2>&1 | tail -3
@@ -745,7 +745,7 @@ cd ~/neko-tensei && python3 -m unittest discover -s scripts -p 'test_*.py' 2>&1 
 
 Expected：`OK`（測試數比前一個任務多 13 條）。若 `test_既有兩話的對白全部放行` 失敗，代表簡繁判斷誤殺了合法正體字——那是 Critical，先查清楚再往下，不要放寬測試。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add scripts/next_episode.py scripts/test_next_episode.py
@@ -772,7 +772,7 @@ opencc,因為這個 repo 刻意維持純 stdlib;測試會逐字驗證表內每�
 
 **背景（brief 之外，實作者要知道的）**：gemini-web 的金鑰在 `/home/ct/novel-token-unlimited/漫畫/keys.json`（`gemini-web` 那個鍵），已驗過可用。**那個檔案在 repo 外面，絕對不要把金鑰寫進任何會 commit 的檔案。** 本機測試用環境變數餵進去。
 
-- [ ] **Step 1: 加失敗的測試**
+- [x] **Step 1: 加失敗的測試**
 
 ```python
 class TestPlannerPrompt(unittest.TestCase):
@@ -809,7 +809,7 @@ class TestPlannerPrompt(unittest.TestCase):
             self.assertIn(s, p)
 ```
 
-- [ ] **Step 2: 跑測試確認失敗**
+- [x] **Step 2: 跑測試確認失敗**
 
 ```bash
 cd ~/neko-tensei && python3 -m unittest discover -s scripts -p 'test_*.py' 2>&1 | tail -3
@@ -817,7 +817,7 @@ cd ~/neko-tensei && python3 -m unittest discover -s scripts -p 'test_*.py' 2>&1 
 
 Expected：`AttributeError: module 'next_episode' has no attribute 'build_planner_prompt'`
 
-- [ ] **Step 3: 實作**
+- [x] **Step 3: 實作**
 
 在 `scripts/next_episode.py` 加（頂端補 `import os`、`import re`、`import urllib.request`）：
 
@@ -912,7 +912,7 @@ def make_plan(canon, wishes):
     return json.loads(_strip_fence(call_llm(build_planner_prompt(canon, wishes))))
 ```
 
-- [ ] **Step 4: 跑測試確認通過**
+- [x] **Step 4: 跑測試確認通過**
 
 ```bash
 cd ~/neko-tensei && python3 -m unittest discover -s scripts -p 'test_*.py' 2>&1 | tail -3
@@ -920,7 +920,7 @@ cd ~/neko-tensei && python3 -m unittest discover -s scripts -p 'test_*.py' 2>&1 
 
 Expected：`OK`，36 個測試通過。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add scripts/next_episode.py scripts/test_next_episode.py
@@ -942,7 +942,7 @@ git commit -m "feat(pipeline): 企劃 prompt 與 gemini-web 呼叫"
   - `page_refs(page: dict) -> list[str]` — 該頁要傳哪幾張參考圖的 key
   - `generate_image(name: str, keys: list[str], body: str, out: pathlib.Path) -> None`
 
-- [ ] **Step 1: 加失敗的測試**
+- [x] **Step 1: 加失敗的測試**
 
 ```python
 class TestPageBody(unittest.TestCase):
@@ -990,7 +990,7 @@ class TestPageBody(unittest.TestCase):
         self.assertIn('FINAL CHECK', p)
 ```
 
-- [ ] **Step 2: 跑測試確認失敗**
+- [x] **Step 2: 跑測試確認失敗**
 
 ```bash
 cd ~/neko-tensei && python3 -m unittest discover -s scripts -p 'test_*.py' 2>&1 | tail -3
@@ -998,7 +998,7 @@ cd ~/neko-tensei && python3 -m unittest discover -s scripts -p 'test_*.py' 2>&1 
 
 Expected：`AttributeError: module 'next_episode' has no attribute 'page_body'`
 
-- [ ] **Step 3: 實作**
+- [x] **Step 3: 實作**
 
 在 `scripts/next_episode.py` 加（頂端補 `import base64`、`import time`）：
 
@@ -1081,7 +1081,7 @@ def generate_image(name, keys, body, out):
     print(f'  -> {name} ok {int(time.time() - t0)}s', flush=True)
 ```
 
-- [ ] **Step 4: 跑測試確認通過**
+- [x] **Step 4: 跑測試確認通過**
 
 ```bash
 cd ~/neko-tensei && python3 -m unittest discover -s scripts -p 'test_*.py' 2>&1 | tail -3
@@ -1089,7 +1089,7 @@ cd ~/neko-tensei && python3 -m unittest discover -s scripts -p 'test_*.py' 2>&1 
 
 Expected：`OK`，40 個測試通過。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add scripts/next_episode.py scripts/test_next_episode.py
@@ -1114,7 +1114,7 @@ git commit -m "feat(pipeline): 企劃翻成生圖 prompt,並打 codex-image-serv
   - `episode_entry(plan: dict, n: int, date: str, has_cover: bool) -> dict` — 產 `episodes.json` 的一段
   - `pr_body(plan: dict, n: int, wishes: list[str], wish_err: str | None = None) -> str`
 
-- [ ] **Step 1: 加失敗的測試**
+- [x] **Step 1: 加失敗的測試**
 
 ```python
 class TestRender(unittest.TestCase):
@@ -1168,7 +1168,7 @@ class TestRender(unittest.TestCase):
         self.assertIn('圖有沒有照劇本畫', b)
 ```
 
-- [ ] **Step 2: 跑測試確認失敗**
+- [x] **Step 2: 跑測試確認失敗**
 
 ```bash
 cd ~/neko-tensei && python3 -m unittest discover -s scripts -p 'test_*.py' 2>&1 | tail -3
@@ -1176,7 +1176,7 @@ cd ~/neko-tensei && python3 -m unittest discover -s scripts -p 'test_*.py' 2>&1 
 
 Expected：`AttributeError: module 'next_episode' has no attribute 'render_storyboard'`
 
-- [ ] **Step 3: 實作**
+- [x] **Step 3: 實作**
 
 ```python
 CN = '一二三四五六七八九十'
@@ -1264,7 +1264,7 @@ def pr_body(plan, n, wishes):
     return "\n".join(out)
 ```
 
-- [ ] **Step 4: 跑測試確認通過**
+- [x] **Step 4: 跑測試確認通過**
 
 ```bash
 cd ~/neko-tensei && python3 -m unittest discover -s scripts -p 'test_*.py' 2>&1 | tail -3
@@ -1272,7 +1272,7 @@ cd ~/neko-tensei && python3 -m unittest discover -s scripts -p 'test_*.py' 2>&1 
 
 Expected：`OK`，52 個測試通過。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add scripts/next_episode.py scripts/test_next_episode.py
@@ -1296,7 +1296,7 @@ PR 內文逐頁附「劇本說的」,因為人工閘門要看的不是劇情而�
 - Consumes: 前面全部
 - Produces: `main(argv: list[str]) -> int`，以及命令列旗標 `--dry-run`、`--plan-from FILE`、`--plan-only FILE`、`--skip-images`
 
-- [ ] **Step 1: 加失敗的測試**
+- [x] **Step 1: 加失敗的測試**
 
 ```python
 import io
@@ -1331,7 +1331,7 @@ class TestMain(unittest.TestCase):
         self.assertIn('簡體', buf.getvalue())
 ```
 
-- [ ] **Step 2: 跑測試確認失敗**
+- [x] **Step 2: 跑測試確認失敗**
 
 ```bash
 cd ~/neko-tensei && python3 -m unittest discover -s scripts -p 'test_*.py' 2>&1 | tail -3
@@ -1339,7 +1339,7 @@ cd ~/neko-tensei && python3 -m unittest discover -s scripts -p 'test_*.py' 2>&1 
 
 Expected：`AttributeError: module 'next_episode' has no attribute 'main'`
 
-- [ ] **Step 3: 實作**
+- [x] **Step 3: 實作**
 
 ```python
 import argparse
@@ -1422,7 +1422,7 @@ if __name__ == '__main__':
     raise SystemExit(main())
 ```
 
-- [ ] **Step 4: 跑測試確認通過**
+- [x] **Step 4: 跑測試確認通過**
 
 ```bash
 cd ~/neko-tensei && python3 -m unittest discover -s scripts -p 'test_*.py' 2>&1 | tail -3
@@ -1430,7 +1430,7 @@ cd ~/neko-tensei && python3 -m unittest discover -s scripts -p 'test_*.py' 2>&1 
 
 Expected：`OK`，54 個測試通過。
 
-- [ ] **Step 5: 真的出一次企劃（本機端到端，打 gemini-web）**
+- [x] **Step 5: 真的出一次企劃（本機端到端，打 gemini-web）**
 
 金鑰在 `/home/ct/novel-token-unlimited/漫畫/keys.json`。**只用環境變數餵，不要寫進任何檔案。**
 
@@ -1447,7 +1447,7 @@ print('驗證:', errs or '通過')"
 
 Expected：印出標題與頁數。**如果驗證沒過是預期的**——那正好證明驗證器在工作。把失敗原因記進報告，然後改用 `--plan-from` 餵一份手寫的合格企劃繼續下一步。不要為了讓它過而放寬驗證規則。
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add scripts/next_episode.py scripts/test_next_episode.py

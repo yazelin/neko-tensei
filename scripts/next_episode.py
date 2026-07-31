@@ -10,7 +10,9 @@
   python3 scripts/next_episode.py --plan-from p.json 跳過 LLM,用現成企劃
   python3 scripts/next_episode.py                    整條跑完
 """
+import argparse
 import base64
+import datetime
 import json
 import os
 import pathlib
@@ -650,3 +652,82 @@ def generate_image(name, keys, body, out):
     with urllib.request.urlopen(url, timeout=300) as r, out.open('wb') as w:
         w.write(r.read())
     print(f'  -> {name} ok {int(time.time() - t0)}s', flush=True)
+
+
+def publish(plan, n, has_cover):
+    """落檔:圖已經在 images/epN/ 了,這裡處理分鏡、episodes.json 與 build。"""
+    (ROOT / 'story' / f'ep{n}.md').write_text(render_storyboard(plan, n), 'utf-8')
+
+    cfg_path = ROOT / 'episodes.json'
+    cfg = json.loads(cfg_path.read_text('utf-8'))
+    date = datetime.date.today().isoformat()
+    cfg['episodes'].append(episode_entry(plan, n, date, has_cover))
+    cfg_path.write_text(json.dumps(cfg, ensure_ascii=False, indent=2) + '\n', 'utf-8')
+
+    # sw.js:殼要 bump(多了一頁 epN.html);ASSET 只有換圖才 bump,
+    # 但這次確實多了新圖,所以兩個都要動。
+    sw = ROOT / 'sw.js'
+    t = sw.read_text('utf-8')
+    for kind in ('shell', 'asset'):
+        m = re.search(rf"nt-{kind}-v(\d+)", t)
+        if not m:
+            raise RuntimeError(f'sw.js 找不到 nt-{kind}-v<數字>,版號沒 bump 就落檔會讓'
+                               f'讀者拿到舊快取,這裡直接停下來')
+        t = t.replace(m.group(0), f"nt-{kind}-v{int(m.group(1)) + 1}")
+    sw.write_text(t, 'utf-8')
+
+    subprocess.run(['python3', str(ROOT / 'build.py')], check=True, cwd=ROOT)
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(description='產出下一話')
+    ap.add_argument('--dry-run', action='store_true', help='只出企劃並驗證,不出圖不落檔')
+    ap.add_argument('--plan-from', metavar='FILE', help='跳過 LLM,用現成的企劃 JSON')
+    ap.add_argument('--plan-only', metavar='FILE', help='只出企劃,存成 FILE 後結束')
+    ap.add_argument('--skip-images', action='store_true', help='不出圖,其餘照跑')
+    a = ap.parse_args(argv)
+
+    canon = load_canon()
+    n = canon['next_n']
+    titles = [e['title'] for e in canon['episodes']]
+    wishes, wish_err = fetch_wishes()
+    if wish_err:
+        print('警告:讀許願失敗,這一話會當作沒有許願繼續 —', wish_err)
+    print(f'第 {n} 話;讀到 {len(wishes)} 則許願')
+
+    if a.plan_from:
+        plan = json.loads(pathlib.Path(a.plan_from).read_text('utf-8'))
+    else:
+        plan = make_plan(canon, wishes)
+        if a.plan_only:
+            pathlib.Path(a.plan_only).write_text(
+                json.dumps(plan, ensure_ascii=False, indent=2), 'utf-8')
+            print('企劃已存到', a.plan_only)
+            return 0
+
+    errs = validate_plan(plan, n, titles)
+    if errs:
+        print('企劃沒過驗證:')
+        for e in errs:
+            print(' -', e)
+        return 1
+    print('企劃通過驗證:', plan['title'])
+
+    if a.dry_run:
+        return 0
+
+    has_cover = False
+    if not a.skip_images:
+        for pg in plan['pages']:
+            out = ROOT / f'images/ep{n}' / f"{pg['n']}.webp"
+            generate_image(pg['n'], page_refs(pg), page_body(pg), out)
+        has_cover = (ROOT / f'images/ep{n}/00-cover.webp').is_file()
+
+    publish(plan, n, has_cover)
+    (ROOT / f'.pr-body-ep{n}.md').write_text(pr_body(plan, n, wishes, wish_err), 'utf-8')
+    print('落檔完成。PR 內文在 .pr-body-ep%d.md' % n)
+    return 0
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())
