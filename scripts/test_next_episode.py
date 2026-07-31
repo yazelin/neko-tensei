@@ -205,14 +205,33 @@ class TestSimplified(unittest.TestCase):
                   '唯一的線索', '反而露出笑', '埋下伏筆', '準備好了']:
             self.assertIsNone(ne.has_simplified(s), s)
 
-    def test_既有兩話的對白全部放行(self):
-        # 最有價值的一條:拿真實內容當回歸測試。手打字表就是敗在這裡——
-        # 誤收正體字之後,連自己已經上線的對白都會被判成簡體。
+    def test_台灣標準異體字要放行(self):
+        # code review 抓到的 Critical:STCharacters.txt 收了一批「異體字
+        # 正規化」,不是真的簡繁對立——「峰」的候選只有「峯」,照字元候選清單
+        # 的規則會誤判成簡體,但「峰」才是台灣教育部標準寫法。全表掃描確認
+        # 只有這 7 個字受影響:秘/祕、群/羣、床/牀、峰/峯、痴/癡、灶/竈、
+        # 粽/糉。最後一句是這個 repo 自己 index.html/README.md 的既有文案,
+        # 「一群貓」對貓漫畫是高機率用詞,這條錯了會擋掉大多數合法企劃。
+        for s in ['秘密', '一群貓', '起床', '山峰', '痴心', '灶臺', '粽子',
+                  '誕生於 LINE C# 社群閒聊的連載漫畫']:
+            self.assertIsNone(ne.has_simplified(s), s)
+
+    def test_既有正體中文資產全部放行(self):
+        # 最有價值的一條:拿真實內容當回歸測試,範圍涵蓋整個 repo 的正體
+        # 中文資產,不是只掃兩話分鏡——上一輪只掃 story/ep*.md,漏掉了
+        # 「一群貓」這種只出現在 index.html/README.md 的假陽性,這條就是
+        # 補那個洞。手打字表就是敗在同一個地方:誤收正體字之後,連自己
+        # 已經上線的文案都會被判成簡體。
         import pathlib as _p
         root = _p.Path(__file__).parent.parent
-        for f in sorted((root / 'story').glob('ep*.md')):
+        targets = (list(root.glob('story/*.md')) +
+                   [root / 'index.html', root / 'README.md',
+                    root / 'partials' / 'footer.html'] +
+                   list(root.glob('char/*.html')))
+        self.assertGreaterEqual(len(targets), 8, f'掃描目標太少,glob 可能沒對到檔案:{targets}')
+        for f in sorted(targets):
             bad = ne.has_simplified(f.read_text('utf-8'))
-            self.assertIsNone(bad, f'{f.name} 出現「{bad}」')
+            self.assertIsNone(bad, f'{f.relative_to(root)} 出現「{bad}」')
 
     def test_空字串與None不炸(self):
         self.assertIsNone(ne.has_simplified(''))
@@ -288,6 +307,58 @@ class TestValidate(unittest.TestCase):
         p['pages'][2]['panels'] = [{'pos': 'top', 'scene': '空景', 'lines': []}]
         errs = ne.validate_plan(p, 3, [])
         self.assertTrue(any('對白' in e for e in errs), errs)
+
+    def test_整頁框型都不合法不會crash(self):
+        # code review 抓到的 Important:page_shapes 只收合法框型,整頁都是
+        # 不存在的框型時 page_shapes 是空 list,原本的「框型全部一樣」檢查
+        # 會拿 page_shapes[0] 去比,直接 IndexError——守門員在最該擋的時候
+        # 自己先死掉,而不是回一份錯誤清單。這裡驗證不會丟例外,而是正常
+        # 回報「不存在的框型」。
+        p = _good_plan()
+        for ln in p['pages'][0]['panels'][0]['lines'] + p['pages'][0]['panels'][1]['lines']:
+            ln['shape'] = 'ROUND'
+        errs = ne.validate_plan(p, 3, [])  # 不該丟例外
+        self.assertTrue(any('不存在的框型' in e for e in errs), errs)
+
+    def test_不認得的說話者會被擋(self):
+        # 跟 test_不認識的角色會被擋 測的是不同欄位:那條測的是 pg['chars']
+        # 名單,這條測的是對白本身的 speaker 沒人認得(chars 名單是對的,
+        # 只是某一句對白的 speaker 打錯或幻覺出一個不存在的角色)。
+        p = _good_plan()
+        p['pages'][0]['panels'][0]['lines'][0]['speaker'] = '路人乙'
+        errs = ne.validate_plan(p, 3, [])
+        self.assertTrue(any('路人乙' in e for e in errs), errs)
+
+    def test_頁面沒有分格會被擋(self):
+        # 跟 test_沒有對白的頁面會被擋 測的是不同情況:那條的 panels 是
+        # 非空清單、裡面的 lines 是空的;這條是 panels 本身就是空清單,
+        # 要走「沒有分格」那個 continue 分支,不是「一句對白都沒有」那條。
+        p = _good_plan()
+        p['pages'][2]['panels'] = []
+        errs = ne.validate_plan(p, 3, [])
+        self.assertTrue(any('沒有分格' in e for e in errs), errs)
+
+    def test_企劃不是物件會被擋(self):
+        for bad_plan in [['not', 'a', 'dict'], 'a string', None, 42]:
+            self.assertEqual(ne.validate_plan(bad_plan, 3, []), ['企劃不是一個物件'])
+
+    def test_空白對白會被擋(self):
+        p = _good_plan()
+        p['pages'][0]['panels'][0]['lines'][0]['text'] = '   '
+        errs = ne.validate_plan(p, 3, [])
+        self.assertTrue(any('空白對白' in e for e in errs), errs)
+
+    def test_頁碼重複會被擋(self):
+        p = _good_plan()
+        p['pages'][1]['n'] = p['pages'][0]['n']  # 兩頁都是 01,06 就沒人補
+        errs = ne.validate_plan(p, 3, [])
+        self.assertTrue(any('頁碼' in e for e in errs), errs)
+
+    def test_標題空白會被擋(self):
+        p = _good_plan()
+        p['title'] = '   '
+        errs = ne.validate_plan(p, 3, [])
+        self.assertTrue(any('缺欄位:title' in e for e in errs), errs)
 
 
 if __name__ == '__main__':
