@@ -48,7 +48,7 @@ PANEL 3 (bottom): SWORDSMAN CAT leans forward curious, hand hovering right over 
 |---|---|---|---|
 | top | SWORDSMAN CAT slams his cat hand straight down onto the giant red button. High-voltage red emergency lights immediately flash across the whole corridor. | 小白++「卡嗒！我按了！」 | SHOUT |
 |  |  | 里歐「你手速也太快了吧？！」 | TREMBLE |
-| mid | A giant holographic speakers icon appears high up in the air, broadcasting loud glowing cyan text. SAMURAI CAT drops his head into his paws in despair. | 中年攻城屍「完旦了，老夫的人生要在此處終結了……」 | WEAK |
+| mid | A giant holographic speakers icon appears high up in the air, broadcasting loud glowing cyan text. SAMURAI CAT drops his head into his paws in despair. | 中年攻城屍「完蛋了，老夫的人生要在此處終結了……」 | WEAK |
 |  |  | 小鳥不啾「冷靜點，廣播開始放音樂了。」 | OVAL |
 | bottom | An old retro anime song text banner streams out of the holographic speaker: 'Welcome to Arasaka System Test'. All four cats freeze with completely flat deadpan faces. | 里歐「……這不是荒坂哥的入社音樂嗎。」 | WEAK |
 |  |  | 小白++「竟然只是音響測試？」 | OVAL |
@@ -60,7 +60,7 @@ PANEL 1 (top): SWORDSMAN CAT slams his cat hand straight down onto the giant red
   SHOUT BALLOON from xiaobai: 卡嗒！我按了！
   TREMBLE BALLOON from leo: 你手速也太快了吧？！
 PANEL 2 (middle): A giant holographic speakers icon appears high up in the air, broadcasting loud glowing cyan text. SAMURAI CAT drops his head into his paws in despair.
-  WEAK BALLOON from uncle: 完旦了，老夫的人生要在此處終結了……
+  WEAK BALLOON from uncle: 完蛋了，老夫的人生要在此處終結了……
   OVAL BALLOON from xiaoniao: 冷靜點，廣播開始放音樂了。
 PANEL 3 (bottom): An old retro anime song text banner streams out of the holographic speaker: 'Welcome to Arasaka System Test'. All four cats freeze with completely flat deadpan faces.
   WEAK BALLOON from leo: ……這不是荒坂哥的入社音樂嗎。

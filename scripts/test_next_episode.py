@@ -709,10 +709,20 @@ class TestValidate(unittest.TestCase):
 
 class TestPlannerPrompt(unittest.TestCase):
     def test_prompt_帶進規範與最近分鏡(self):
+        """規範全文與最近兩話的分鏡都要進 planner。
+
+        原本這裡寫死第二話標題裡的「得加 Token」,第四話一落地就紅了——它驗的
+        是「現在最近兩話剛好是 ep1、ep2」。跟 test_帶進最近兩話的分鏡 同一種
+        脆弱,同樣改成從 episodes.json 推導,用各話分鏡檔的 H1 整行當指標。
+        """
         canon = ne.load_canon()
         p = ne.build_planner_prompt(canon, [])
-        self.assertIn('對話框的形狀跟著劇情走', p)
-        self.assertIn('得加 Token', p)
+        self.assertIn('對話框的形狀跟著劇情走', p)     # 規範全文
+
+        story = pathlib.Path(__file__).parent.parent / 'story'
+        for n in sorted(e['n'] for e in canon['episodes'])[-2:]:
+            h1 = (story / f'ep{n}.md').read_text('utf-8').splitlines()[0]
+            self.assertIn(h1, p, f'最近兩話之一沒進 planner:第 {n} 話')
 
     def test_prompt_要求純JSON(self):
         p = ne.build_planner_prompt(ne.load_canon(), [])
