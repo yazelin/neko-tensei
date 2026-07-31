@@ -266,6 +266,20 @@ class TestCastJsonIsTheSource(unittest.TestCase):
         self.assertIn('NO glasses', prompt.SHEET, '沒寫死小白++ 不戴眼鏡')
         self.assertIn('NEVER on any other cat', prompt.SHEET, '沒寫死眼鏡只屬於小鳥不啾')
 
+    def test_金牌在胸前_背影看不到(self):
+        """第三話第 06 頁畫背影時,「貓」字金牌浮在武士貓的背上。
+
+        原本的設定只寫「hanging on his chest」——那是「有什麼」,沒寫「什麼
+        時候看不到」。跟眼鏡、通行證同一類:模型不會自己推論遮擋關係。
+        """
+        self.assertIn('NOT visible', prompt.SHEET)
+        self.assertIn('Never draw the medallion on his back', prompt.SHEET)
+
+    def test_動作要用手做的規則有進_planner(self):
+        # 第 04 頁的「用貓牙咬電纜」「用後腿踢插座」就是這樣來的
+        p = ne.build_planner_prompt(ne.load_canon(), [])
+        self.assertIn('動作要用手做', p)
+
     def test_道具設定圖是乾淨的單一物件(self):
         rel = self.cast['world']['pass']['ref']
         p = pathlib.Path(__file__).parent.parent / rel
