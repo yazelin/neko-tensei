@@ -182,6 +182,43 @@
           "alt": "Close-up on the central holographic column displaying a golden user profile picture of a cute fluffy cat avatar titled 'System Owner: Arasaka Kojiro'.：小鳥不啾「『系統擁有者：荒坂小次郎』。」、里歐「這整座塔…"
         }
       ]
+    },
+    {
+      "n": 5,
+      "title": "魔王的備份資料庫",
+      "date": "2026-08-04",
+      "desc": "四貓深入荒坂小次郎的私有機房，竟在備份硬碟中發現自己前世被留存的程式碼與黑歷史。",
+      "credit": "劇情與作畫：Claude × gpt-image-2",
+      "pages": [
+        {
+          "f": "00-cover.webp",
+          "alt": "第五話封面：魔王的備份資料庫"
+        },
+        {
+          "f": "01.webp",
+          "alt": "The four cats stand inside the massive server vault facing a giant shining blue storage array rack filled with thousands of glowing crystal drive bays.：小白++「哇！這整面牆都是硬碟陣列！」、中年攻城屍「小心"
+        },
+        {
+          "f": "02.webp",
+          "alt": "SWORDSMAN CAT reaches his paw out curiosity and pulls out a glowing blue crystal drive from the rack.：小白++「不管了！抽一顆出來看看裡面寫啥！」、小鳥不啾「小白！不要在運行中熱插拔——」、里歐「警報響了！RAID 陣列崩潰啦！」、中年攻城屍「蠢材！就叫你不"
+        },
+        {
+          "f": "03.webp",
+          "alt": "ROGUE CAT quickly pulls out a glowing silver bypass key with his hand and inserts it into a slot under the rack terminal.：里歐「讓開！插入備份強制卡鎖！」、中年攻城屍「來得及嗎？！」、里歐「呼……還好有留硬體寫保護開關。」、小白++「差點"
+        },
+        {
+          "f": "04.webp",
+          "alt": "The floating cyan screen displays a video log of former human male engineer Kojiro typing tiredly at night in an office.：小白++「這是……小次郎前世的影像紀錄？」、里歐「看起來也是個每天加班到深夜的苦命工程師。」、小鳥不啾「註解寫著……『"
+        },
+        {
+          "f": "05.webp",
+          "alt": "ROGUE CAT points his cat paw at a flashing red line of code at the bottom of the video log.：里歐「但是等一下！最後一行寫著『Unresolved Critical Bug』！」、中年攻城屍「什麼？！連魔王都解不掉的致命 Bug？！」、小鳥不啾「這是『貓化協定記憶體溢位"
+        },
+        {
+          "f": "06.webp",
+          "alt": "SWORDSMAN CAT raises his front paw high with determined eyes, tiger fang gleaming.：小白++「這次換我們來幫小次郎哥完成這個 Patch！」、里歐「沒錯！我們可是專業的 Debug 團隊！」、中年攻城屍「老夫的鋼刀，這次要砍向系統的 Core Bug！」、小鳥不啾「準備開始對主"
+        }
+      ]
     }
   ]
 }
