@@ -9,7 +9,7 @@
 /* 版號由 build.py 從清單裡每個檔案的內容算出來,別手改。改殼檔或換圖跑一次
    build.py 就會自己變;要強制所有讀者重來,改 build.py 的 EPOCH。 */
 /* ver:start */
-const SHELL = 'nt-shell-v20-df55fcd8';
+const SHELL = 'nt-shell-v20-6b4a8756';
 const ASSET = 'nt-asset-v20-01deb338';
 /* ver:end */
 
