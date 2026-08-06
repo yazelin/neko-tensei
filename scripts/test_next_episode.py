@@ -519,10 +519,11 @@ def _good_plan(n=3):
             {'n': f'{i:02d}',
              'chars': ['xiaoniao', 'xiaobai'],
              'panels': [
-                 {'pos': 'top', 'scene': '四貓走在荒原上',
+                 {'pos': 'top',
+                  'scene': '四貓走在荒原上,SWORDSMAN CAT 走在最前面',
                   'lines': [{'speaker': 'xiaobai', 'shape': shapes[i - 1],
                              'text': '那座塔越來越近了。'}]},
-                 {'pos': 'mid', 'scene': '塔門緊閉',
+                 {'pos': 'mid', 'scene': '塔門緊閉,MAGE CAT 站在門前',
                   # 用 shapes[i % 6] 而非固定 'OVAL':固定值在 i=2 時會撞上
                   # shapes[i - 1](= shapes[1] = 'OVAL'),讓「好的企劃」在
                   # 第 02 頁自己觸發「框型全部一樣」——基準本身就該是乾淨的。
@@ -668,8 +669,11 @@ class TestValidate(unittest.TestCase):
 
     def test_小次郎用別的框型可以(self):
         p = _good_plan()
-        p['pages'][0]['panels'][0]['lines'][0]['speaker'] = 'kojiro'
-        p['pages'][0]['panels'][0]['lines'][0]['shape'] = 'DEMON'
+        panel = p['pages'][0]['panels'][0]
+        panel['lines'][0]['speaker'] = 'kojiro'
+        panel['lines'][0]['shape'] = 'DEMON'
+        # 換了說話者,畫面描述也要跟著換——這正是新規則要擋的東西
+        panel['scene'] = '四貓走在荒原上,DEMON KING CAT 從天上俯視'
         self.assertEqual(ne.validate_plan(p, 3, []), [])
 
     def test_標題與既有話數重複會被擋(self):
@@ -1418,6 +1422,53 @@ class TestWordingProblems(unittest.TestCase):
         self.assertEqual(calls, [])
 
 
+class TestSpeakerInScene(unittest.TestCase):
+    """有台詞的角色一定要出現在該格的 scene 裡。
+
+    第六話第 02 頁第一格:scene 只寫 ROGUE CAT,卻掛著中年攻城屍的台詞,
+    SAMURAI CAT 從沒被提到 → 模型自己補了一隻,補成小鳥不啾。六頁裡四頁如此。
+    生圖端讀的是 scene 那段英文,speaker 只是給人看的標籤。
+    """
+
+    def _plan(self, scene, speakers):
+        return {
+            'title': 'T', 'desc': 'D', 'kind': '推進主線',
+            'beats': ['1', '2', '3'],
+            'pages': [
+                {'n': f'{i:02d}', 'world': [], 'panels': [{
+                    'scene': scene,
+                    'lines': [{'speaker': sp, 'shape': 'OVAL', 'text': '句子'}
+                              for sp in speakers],
+                }]} for i in range(1, 7)
+            ],
+        }
+
+    def test_說話者沒出現在畫面描述裡就擋下來(self):
+        errs = ne.validate_plan(
+            self._plan('ROGUE CAT types at the left.', ['leo', 'uncle']), 7, [])
+        self.assertTrue(any('SAMURAI CAT' in e for e in errs), errs)
+
+    def test_都點名了就放行(self):
+        errs = ne.validate_plan(
+            self._plan('ROGUE CAT types at the left while SAMURAI CAT panics at the right.',
+                       ['leo', 'uncle']), 7, [])
+        self.assertEqual([e for e in errs if 'SAMURAI' in e or 'ROGUE' in e], [])
+
+    def test_旁白之類沒有說話者的不受影響(self):
+        errs = ne.validate_plan(self._plan('An empty corridor.', [None]), 7, [])
+        self.assertEqual([e for e in errs if '畫面描述' in e], [])
+
+
+class TestPlannerPrompt(unittest.TestCase):
+    def test_prompt_要求寫位置也要求異世界要素(self):
+        # 連續五話的舞台都是機房,異世界只剩貼圖;而位置沒寫死,說話者就會漂
+        pr = ne.build_planner_prompt(
+            {'next_n': 7, 'rules': 'R', 'recent': 'X', 'episodes': []}, [])
+        self.assertIn('SAMURAI CAT', pr)
+        self.assertIn('異世界', pr)
+        self.assertIn('比喻', pr)
+
+
 class TestVerifySection(unittest.TestCase):
     """PR 內文的機器驗收段。人是閘門,所以這段的用字要讓人知道「機器說過了」
     不等於「可以直接按 merge」。"""
@@ -1453,6 +1504,25 @@ class TestVerifySection(unittest.TestCase):
 
 
 class TestVerifyEpisode(unittest.TestCase):
+    def test_封面也要驗(self):
+        # 第六話的封面完全沒被驗過也沒出現在 PR 裡,因為這裡只跑 plan['pages']
+        seen = []
+
+        def fake_check(img, rules, context):
+            seen.append(pathlib.Path(img).name)
+            return 'PASS', 1.0, 'VERDICT: PASS'
+
+        plan = {'pages': [{'n': '01', 'panels': [], 'world': []}]}
+        with patch.dict(os.environ, {'CODEX_IMAGE_KEY': 'x'}), \
+             patch.object(ne.pathlib.Path, 'is_file', lambda self: True), \
+             patch.object(ne, 'page_body', lambda pg: 'PANEL 1: ...'):
+            import verify_pages
+            with patch.object(verify_pages, 'check_page_service', fake_check), \
+                 patch.object(verify_pages, 'load_rules', lambda: '規則'):
+                ne.verify_episode(6, plan)
+        self.assertIn('00-cover.webp', seen)
+        self.assertIn('01.webp', seen)
+
     def test_沒有金鑰就跳過(self):
         with patch.dict(os.environ, {}, clear=True):
             self.assertEqual(ne.verify_episode(6, {'pages': []}), [])
