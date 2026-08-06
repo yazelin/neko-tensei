@@ -152,6 +152,10 @@ NODE_PATH=$(npm root -g) node scripts/verify-mobile.js
 python3 -B -m unittest discover -s scripts -p 'test_*.py'
 ```
 
+企劃階段有一道**對白校對**（`wording_problems`）：把整話對白丟回企劃模型，問有沒有不成詞的錯字。`validate_plan` 管得了頁數、框型、簡繁、角色、道具 id，那些都能寫成規則；但「完旦」「逼」是合法字元組成的錯詞，要用程式抓得有詞庫，而這個 repo 的紅線是**不手維護字表**（當初手打的簡體表混進「那」「只」「反」，差點全擋）。用 LLM 判詞就不需要字表。
+
+**放在企劃階段是刻意的**：這裡是純文字，一次幾秒、不花出圖額度，抓到就重出企劃，錯字根本畫不到圖上。校對器自己失敗一律當作沒問題，只印一行警告——這是加分項，不該讓整條線停在校對器上。模型回報的錯詞若在原文裡找不到，也一律丟掉：實測它會把「還敢慶祝」讀成「慶視」，拿幻覺擋掉一份好企劃比漏一個錯字更糟。
+
 行動版驗收的 safe-area 檢查靠 `page.addInitScript()` 注入假的 inset 值——Chromium 的 device emulation 不模擬 `env(safe-area-inset-*)`，一律回 0，不注入就等於沒驗。
 
 沒有 `package.json`（playwright 用全域的），只有一個 pip 相依 `opencc-python-reimplemented`。**不要新增相依。**

@@ -958,6 +958,69 @@ def generate_with_retry(name, keys, body, out):
     raise RuntimeError(f'{name} 出圖連 {IMG_RETRIES} 次都失敗: {last}')
 
 
+WORDING_PROMPT = """你是繁體中文校對。下面是一部漫畫的對白清單,每行前面是編號。
+
+找出**不成詞的錯字**:每個字單獨看都是合法的正體中文字,但湊在一起不成詞,
+通常是同音或形近誤用。已經發生過的例子:「完蛋」寫成「完旦」、刷卡的
+「嗶」寫成「逼」。
+
+只挑真的不成詞的。這是一部搞笑奇幻漫畫,角色是工程師,以下都**不算錯**:
+- 網路用語、故意的諧音梗、自創詞
+- 中英夾雜(Bug、Token、Log、Patch 這類)
+- 語氣詞與拉長音(「欸——」「唔…」)
+- 專有名詞與角色暱稱(小鳥不啾、小白++、中年攻城屍、里歐、荒坂小次郎)
+
+用 JSON 回答,格式:{"problems": [{"line": 編號, "wrong": "錯詞", "right": "正確的詞"}]}
+沒有問題就回 {"problems": []}。不要解釋,只回 JSON。
+
+對白清單:
+%s"""
+
+
+def wording_problems(plan):
+    """用 LLM 校對對白裡的錯字。回問題清單,空清單代表沒問題。
+
+    **這是 validate_plan 抓不到的那一類。** validate_plan 管頁數、框型、簡繁、
+    角色、道具 id,那些都有明確規則可以寫成程式;但「完旦」是合法字元組成的
+    錯詞,要抓它得有詞庫,而這個 repo 的紅線是不手維護字表(當初手打的簡體表
+    混進「那」「只」「反」,差點全擋)。用 LLM 判詞就不需要字表。
+
+    放在企劃階段是刻意的:這裡是純文字,一次幾秒、不花出圖額度,抓到就重出
+    企劃,錯字根本不會被畫到圖上。等圖出來再讀字又貴又會誤讀——實測會把
+    「還敢慶祝」讀成「還敢慶視」。出圖後那道檢查(story/verify.md)保留當
+    第二道網,不是取代這道。
+
+    校對本身失敗(模型掛了、回了不是 JSON)一律當作沒問題,只印一行警告:
+    這是加分項,不該讓整條線停在校對器上。
+    """
+    lines = [(i, text) for i, (_, _, _, text) in enumerate(_lines(plan), 1) if text]
+    if not lines:
+        return []
+    listing = '\n'.join(f'{i}. {text}' for i, text in lines)
+    try:
+        raw = call_llm(WORDING_PROMPT % listing)
+        problems = json.loads(_strip_fence(raw)).get('problems') or []
+    except Exception as e:
+        print(f'  對白校對跳過(校對器自己出錯): {str(e)[:160]}', flush=True)
+        return []
+
+    by_line = dict(lines)
+    errs = []
+    for p in problems:
+        if not isinstance(p, dict):
+            continue
+        wrong = str(p.get('wrong') or '').strip()
+        # 模型偶爾會回一個原文裡根本沒有的詞。對不上就丟掉,不要拿幻覺去
+        # 擋掉一份好企劃。
+        text = by_line.get(p.get('line'))
+        if not wrong or not text or wrong not in text:
+            continue
+        right = str(p.get('right') or '').strip()
+        errs.append(f'第 {p.get("line")} 句「{text}」的「{wrong}」疑似錯字'
+                    + (f',應為「{right}」' if right else ''))
+    return errs
+
+
 def plan_with_retry(canon, wishes, titles, n):
     """企劃不過就重試一次,再不過就放棄。
 
@@ -967,7 +1030,9 @@ def plan_with_retry(canon, wishes, titles, n):
     errs = []
     for attempt in (1, 2):
         plan = make_plan(canon, wishes)
-        errs = validate_plan(plan, n, titles)
+        # 校對排在規則驗證之後:規則不過就沒必要再花一次 LLM 呼叫去校對一份
+        # 本來就要重擲的企劃。
+        errs = validate_plan(plan, n, titles) or wording_problems(plan)
         if not errs:
             return plan
         print(f'企劃第 {attempt}/2 次沒過:')
