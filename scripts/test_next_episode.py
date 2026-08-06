@@ -747,6 +747,36 @@ class TestValidate(unittest.TestCase):
         self.assertTrue(any('缺欄位:title' in e for e in errs), errs)
 
 
+class TestBalloonPlacement(unittest.TestCase):
+    """氣泡要放在說話者旁邊。
+
+    第六話與已上線的好幾頁都是同一個病:角色本身畫對了,但氣泡飄在別隻頭上,
+    讀者就會認錯是誰在講話——等於那句台詞被改派給別人。這件事分鏡管不到,
+    是生圖模型自己排版,所以規則要寫進圖的 prompt。
+    """
+
+    def _prompt(self):
+        return prompt.build_prompt(
+            '01', ['style', 'balloons', 'xiaobai'],
+            'PANEL 1 (top): SWORDSMAN CAT at left.\n  OVAL BALLOON from xiaobai: 測試')
+
+    def test_要求氣泡貼著說話者且尾巴指向他(self):
+        out = self._prompt()
+        self.assertIn('point its tail at THAT character', out)
+
+    def test_畫外音的氣泡不可以指向畫面裡的貓(self):
+        # 企劃會自動把沒點名的說話者補成 speaks from off-panel,圖這邊要接得住
+        self.assertIn('speaks from off-panel', self._prompt())
+
+    def test_最後檢查也要逐顆走一遍(self):
+        self.assertIn('walk the balloons one by one', self._prompt())
+
+    def test_封面不帶對白規則(self):
+        # 封面沒有對白,帶這些只會佔 prompt 長度
+        out = prompt.build_prompt('cover', ['style'], 'cover art')
+        self.assertNotIn('point its tail at THAT character', out)
+
+
 class TestFantasyField(unittest.TestCase):
     """異世界元素必填。
 
