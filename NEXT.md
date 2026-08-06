@@ -85,10 +85,14 @@ NODE_PATH=$(npm root -g) node scripts/verify-mobile.js
 
 ## 視覺驗收（2026-08-06 落地，尚未接進 Actions）
 
-`scripts/verify_pages.py` 只在本機跑，靠 `codex exec` 的視覺判讀，而那需要登入態的
-Codex CLI——Actions 上沒有。要讓 workflow 出圖後自動驗，得改走官方 Gemini API
-（`generativelanguage.googleapis.com`）。`.11` 的 gemini-web 中繼**不能用**：它的
-Gemini 相容端點只轉文字，圖片 part 會被丟掉（回 200 但模型收不到圖）。
+**已接進 pipeline**（2026-08-06）。`scripts/verify_pages.py` 有兩條後端、同一份規則：
+本機走 `codex exec`，CI 走 `.11` 的 codex-image-service `/v1/vision`（該端點就是為了
+這件事加的）。金鑰用出圖那把 `CODEX_IMAGE_KEY`，workflow 本來就傳了，沒有改 workflow。
+`next_episode.py` 出圖後逐頁驗，結果寫進 PR 內文的「機器驗收」段。
+
+不走官方 Gemini API 的原因：不必另生金鑰，額度也跟出圖同一個 ChatGPT 訂閱池。
+`.11` 的 gemini-web 中繼則是**不能用**——它的 Gemini 相容端點只轉文字，圖片 part
+會被丟掉（回 200 但模型收不到圖）。
 
 現況與已知邊界：
 
@@ -97,5 +101,5 @@ Gemini 相容端點只轉文字，圖片 part 會被丟掉（回 200 但模型�
   狀聲字／頁碼／簽名。
 - **抓不到**：角色被畫得像另一個角色但仍分辨得出來（小白++ 被畫蓬鬆那類）。
   四種規則寫法都漏抓，這是程度問題，沒有可寫死的判準，留人工。
-- **待修**：第三話第 01 頁第二格「逼——卡成功！」，刷卡的嗶聲寫成「逼」。
-  修完把 `scripts/verify_cases.txt` 裡那行改成 PASS。
+- **不擋落檔**：判定寫進 PR 內文給人看，人才是閘門。機器判錯而擋掉整話，比漏報
+  一頁還糟——重跑一話是 36 分鐘。

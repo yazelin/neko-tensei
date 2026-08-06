@@ -1418,5 +1418,45 @@ class TestWordingProblems(unittest.TestCase):
         self.assertEqual(calls, [])
 
 
+class TestVerifySection(unittest.TestCase):
+    """PR 內文的機器驗收段。人是閘門,所以這段的用字要讓人知道「機器說過了」
+    不等於「可以直接按 merge」。"""
+
+    PLAN = {'title': 'T', 'desc': 'D', 'beats': ['b1', 'b2', 'b3'],
+            'kind': '推進主線',
+            'pages': [{'n': '01', 'panels': [], 'world': []}]}
+
+    def test_沒過的頁列在前面而且點名理由(self):
+        body = ne.pr_body(self.PLAN, 6, [], None,
+                          verdicts=[('01', 'FAIL', 'A 違規＋上格＋小白++戴了眼鏡'),
+                                    ('02', 'PASS', '')])
+        self.assertIn('## 機器驗收', body)
+        self.assertIn('第 01 頁', body)
+        self.assertIn('小白++戴了眼鏡', body)
+        self.assertNotIn('第 02 頁 `PASS`', body)
+
+    def test_全過也要說這不等於圖畫對了(self):
+        body = ne.pr_body(self.PLAN, 6, [], None,
+                          verdicts=[('01', 'PASS', ''), ('02', 'PASS', '')])
+        self.assertIn('不代表圖畫對了', body)
+
+    def test_沒跑驗收就不生出這一段(self):
+        # 沒有 CODEX_IMAGE_KEY 時 verdicts 是空的,不該憑空多一個空標題
+        self.assertNotIn('## 機器驗收', ne.pr_body(self.PLAN, 6, [], None, verdicts=[]))
+
+    def test_驗收器自己壞掉會列出來(self):
+        # 靜靜跳過等於騙人說這一話沒問題
+        body = ne.pr_body(self.PLAN, 6, [], None,
+                          verdicts=[('01', 'ERR', '驗收沒跑成功:connection reset')])
+        self.assertIn('ERR', body)
+        self.assertIn('connection reset', body)
+
+
+class TestVerifyEpisode(unittest.TestCase):
+    def test_沒有金鑰就跳過(self):
+        with patch.dict(os.environ, {}, clear=True):
+            self.assertEqual(ne.verify_episode(6, {'pages': []}), [])
+
+
 if __name__ == '__main__':
     unittest.main()

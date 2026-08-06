@@ -6,19 +6,24 @@
 
 有任何一頁 FAIL 就 exit 1,方便接進別的流程。
 
-**這支只在本機跑,沒有接進 GitHub Actions。** 它靠 `codex exec` 的視覺判讀,
-而那需要登入態的 Codex CLI,Actions 上沒有。要接進 workflow 得改走官方 API,
-那是另一件事(看 NEXT.md)。
+**兩條後端,規則同一份。** 本機走 `codex exec`(要登入態的 Codex CLI);CI 上
+沒有那個東西,改走 `.11` 的 codex-image-service `/v1/vision`——它底層跑的是
+同一個 CLI、同一組帳號,金鑰就是出圖那把 `CODEX_IMAGE_KEY`。預設 `--backend
+auto` 會依有沒有那個環境變數自己選,通常不用手動指定。
 
 抓得到什麼、抓不到什麼,以及規則為什麼這樣寫,都在 story/verify.md。
 """
 import argparse
+import base64
+import json
+import os
 import pathlib
 import re
 import subprocess
 import sys
 import tempfile
 import time
+import urllib.request
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 RULES_DOC = ROOT / "story" / "verify.md"
@@ -59,6 +64,38 @@ def verdict_of(output):
     return found[-1] if found else "ERR"
 
 
+def check_page_service(image, rules):
+    """走 .11 的 codex-image-service `/v1/vision`。CI 上唯一能用的路。
+
+    GitHub Actions 沒有登入態的 Codex CLI,但那個服務有——它底層跑的是同一個
+    CLI、同一組帳號。金鑰就是出圖那把 `CODEX_IMAGE_KEY`,不必另外生。
+    """
+    key = os.environ['CODEX_IMAGE_KEY']
+    base = os.environ.get('CODEX_IMAGE_BASE_URL') or 'https://ching-tech.ddns.net/codex-image'
+    body = json.dumps({
+        'prompt': rules,
+        'images_base64': [base64.b64encode(pathlib.Path(image).read_bytes()).decode()],
+    }).encode()
+    req = urllib.request.Request(
+        f'{base}/v1/vision', body,
+        {'Content-Type': 'application/json', 'Authorization': f'Bearer {key}'})
+    started = time.time()
+    with urllib.request.urlopen(req, timeout=600) as f:
+        text = json.load(f)['text']
+    return verdict_of(text), time.time() - started, text
+
+
+def pick_backend(name):
+    """auto = 有 CODEX_IMAGE_KEY 就走服務,否則走本機 CLI。
+
+    本機開發時通常沒設那個環境變數,自然落到 CLI;CI 上 workflow 會帶進來,
+    自然落到服務。兩邊跑的是同一份規則、同一個底層模型。
+    """
+    if name == 'service' or (name == 'auto' and os.environ.get('CODEX_IMAGE_KEY')):
+        return check_page_service
+    return check_page
+
+
 def check_page(image, rules):
     """跑一頁,回 (verdict, 秒數, 完整輸出)。"""
     started = time.time()
@@ -73,7 +110,7 @@ def check_page(image, rules):
     return verdict_of(output), time.time() - started, output
 
 
-def run_regression(rules, verbose):
+def run_regression(rules, verbose, check=None):
     cases = parse_cases(CASES.read_text(encoding="utf-8"))
     print(f"{'頁面':<28}{'期望':<8}{'實得':<8}{'秒':<6}結果")
     hits = []
@@ -87,7 +124,7 @@ def run_regression(rules, verbose):
             image = pathlib.Path(tmp) / (spec.replace("/", "-").replace(":", "-"))
             image.write_bytes(blob.stdout)
 
-            got, secs, output = check_page(image, rules)
+            got, secs, output = (check or check_page)(image, rules)
             ok = got == want
             hits.append(ok)
             label = spec.split(":")[-1].replace("images/", "")
@@ -99,10 +136,10 @@ def run_regression(rules, verbose):
     return 0 if all(hits) else 1
 
 
-def run_pages(paths, rules, verbose):
+def run_pages(paths, rules, verbose, check=None):
     failed = []
     for path in paths:
-        got, secs, output = check_page(path, rules)
+        got, secs, output = (check or check_page)(path, rules)
         print(f"{path}  {got}  {secs:.0f}s")
         if got != "PASS":
             failed.append(path)
@@ -122,14 +159,17 @@ def main(argv=None):
     ap.add_argument("--regression", action="store_true",
                     help="跑 scripts/verify_cases.txt 的回歸集")
     ap.add_argument("-v", "--verbose", action="store_true", help="印模型的完整判讀")
+    ap.add_argument("--backend", choices=("auto", "cli", "service"), default="auto",
+                    help="auto=有 CODEX_IMAGE_KEY 就走 .11 的服務,否則走本機 codex CLI")
     args = ap.parse_args(argv)
 
     rules = load_rules()
+    check = pick_backend(args.backend)
     if args.regression:
-        return run_regression(rules, args.verbose)
+        return run_regression(rules, args.verbose, check)
     if not args.pages:
         ap.error("給我圖檔路徑,或用 --regression")
-    return run_pages(args.pages, rules, args.verbose)
+    return run_pages(args.pages, rules, args.verbose, check)
 
 
 if __name__ == "__main__":
