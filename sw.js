@@ -9,15 +9,15 @@
 /* 版號由 build.py 從清單裡每個檔案的內容算出來,別手改。改殼檔或換圖跑一次
    build.py 就會自己變;要強制所有讀者重來,改 build.py 的 EPOCH。 */
 /* ver:start */
-const SHELL = 'nt-shell-v20-6b4a8756';
-const ASSET = 'nt-asset-v20-499435fb';
+const SHELL = 'nt-shell-v20-da13aec2';
+const ASSET = 'nt-asset-v20-2de08828';
 /* ver:end */
 
 /* 以下兩份清單由 build.py 從 episodes.json 產生,別手改。 */
 const SHELL_FILES = [
 /* shell:start */
   './', './index.html',
-  './ep/1.html', './ep/2.html', './ep/3.html', './ep/4.html', './ep/5.html',
+  './ep/1.html', './ep/2.html', './ep/3.html', './ep/4.html', './ep/5.html', './ep/6.html',
   './char/xiaoniao.html', './char/xiaobai.html', './char/uncle.html', './char/leo.html', './char/kojiro.html',
   './style.css', './app.js', './manifest.json',
   './assets/icon-192.png', './assets/icon-180.png', './assets/favicon-32.png'/* shell:end */
@@ -38,9 +38,11 @@ const WARM = [
   './images/ep4/05.webp', './images/ep4/06.webp', './images/ep5/00-cover.webp',
   './images/ep5/01.webp', './images/ep5/02.webp', './images/ep5/03.webp',
   './images/ep5/04.webp', './images/ep5/05.webp', './images/ep5/06.webp',
-  './images/char-xiaoniao.webp', './images/char-xiaobai.webp', './images/char-uncle.webp',
-  './images/char-leo.webp', './images/char-kojiro.webp', './assets/icon-512.png',
-  './assets/og.jpg'/* warm:end */
+  './images/ep6/00-cover.webp', './images/ep6/01.webp', './images/ep6/02.webp',
+  './images/ep6/03.webp', './images/ep6/04.webp', './images/ep6/05.webp',
+  './images/ep6/06.webp', './images/char-xiaoniao.webp', './images/char-xiaobai.webp',
+  './images/char-uncle.webp', './images/char-leo.webp', './images/char-kojiro.webp',
+  './assets/icon-512.png', './assets/og.jpg'/* warm:end */
 ];
 
 /* 殼檔的絕對網址。查快取時要限定在 SHELL 裡找,不能用全域 caches.match()——

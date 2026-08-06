@@ -219,6 +219,43 @@
           "alt": "SWORDSMAN CAT raises his front paw high with determined eyes, tiger fang gleaming.：小白++「這次換我們來幫小次郎哥完成這個 Patch！」、里歐「沒錯！我們可是專業的 Debug 團隊！」、中年攻城屍「老夫的鋼刀，這次要砍向系統的 Core Bug！」、小鳥不啾「準備開始對主"
         }
       ]
+    },
+    {
+      "n": 6,
+      "title": "Merge Conflict 的石巨人",
+      "date": "2026-08-06",
+      "desc": "修 Bug 小隊剛準備提交 PR，黑塔防禦機制竟召喚出由衝突程式碼構成的巨大石巨人！",
+      "credit": "劇情與作畫：Claude × gpt-image-2",
+      "pages": [
+        {
+          "f": "00-cover.webp",
+          "alt": "第六話封面：Merge Conflict 的石巨人"
+        },
+        {
+          "f": "01.webp",
+          "alt": "SWORDSMAN CAT (center-left) slams his front paw onto a glowing crystal terminal inside the tower server vault, while MAGE CAT (center-right) holds her magic staff. SAMURAI CAT (far"
+        },
+        {
+          "f": "02.webp",
+          "alt": "Wide dramatic outdoor shot. On the fog-covered stone bridge, a massive mossy stone golem towers over all four cats. SAMURAI CAT stands at the center-front drawing his sword, SWORDS"
+        },
+        {
+          "f": "03.webp",
+          "alt": "MAGE CAT stands in the background adjusting her gold-rimmed glasses, observing glowing magic runes on the stone golem's chest. ROGUE CAT stands in the foreground, throwing three gl"
+        },
+        {
+          "f": "04.webp",
+          "alt": "SAMURAI CAT (left) slashes the golem's left shoulder rune with sword aura, while SWORDSMAN CAT (right) strikes the right shoulder rune simultaneously in dynamic motion.：中年攻城屍「一刀流·手"
+        },
+        {
+          "f": "05.webp",
+          "alt": "A massive blinding white explosion of energy erupts from the stone golem's chest. The stone golem crumbles into harmless tiny glowing rock fragments. SAMURAI CAT speaks from off-pa"
+        },
+        {
+          "f": "06.webp",
+          "alt": "Inside the server control room, a giant crimson holographic shadow projection of DEMON KING CAT (Arasaka Kojiro) with glowing red eyes appears above the main console, arms crossed "
+        }
+      ]
     }
   ]
 }
