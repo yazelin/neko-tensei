@@ -672,7 +672,7 @@ def episode_entry(plan, n, date, has_cover):
             'credit': '劇情與作畫：Claude × gpt-image-2', 'pages': pages}
 
 
-def pr_body(plan, n, wishes, wish_err=None, branch=None):
+def pr_body(plan, n, wishes, wish_err=None, branch=None, verdicts=None):
     """組 PR 內文。
 
     `wish_err` 是 `fetch_wishes()` 回傳 tuple 的第二個值——「讀許願失敗」
@@ -710,6 +710,21 @@ def pr_body(plan, n, wishes, wish_err=None, branch=None):
     elif wishes:
         out.append('\n## 這次讀到的社群許願\n')
         out += [f'- {w}' for w in wishes]
+    if verdicts:
+        bad = [v for v in verdicts if v[1] != 'PASS']
+        out.append('\n## 機器驗收\n')
+        if bad:
+            out.append('**這幾頁沒過,先看它們**（規則在 `story/verify.md`）：\n')
+            out += [f'- 第 {name} 頁 `{verdict}`：{detail or "（沒給理由）"}'
+                    for name, verdict, detail in bad]
+            out.append('\n它也會判錯——抓不到「角色被畫得像另一個角色但仍分辨得出來」那類，'
+                       '偶爾會把讀不清楚的字判成錯字。**它說沒過不代表一定要重生，'
+                       '它說過了也不代表你不用看。**\n')
+        else:
+            out.append(f'{len(verdicts)} 頁全過。這只代表沒踩到寫死的那幾條規則'
+                       '（眼鏡戴錯人、對白錯字、狀聲字頁碼），'
+                       '**不代表圖畫對了**——底下還是要逐頁看。\n')
+
     out.append('\n## 逐頁對照\n')
     out.append('**你要看的不是劇情，是圖有沒有照劇本畫。** '
                '劇情在文字層通常沒問題，會出事的是「劇本寫的」跟「圖畫出來的」之間那道縫——'
@@ -1057,6 +1072,46 @@ def today_tw():
     return datetime.datetime.now(TW).date().isoformat()
 
 
+def verify_episode(n, plan):
+    """出圖後逐頁跑視覺驗收。回 [(頁名, 判定, 說明)],空清單代表沒跑。
+
+    這是 validate_plan 與對白校對之後的第三道:前兩道都在文字層,看不到「劇本
+    寫的」跟「圖畫出來的」之間那道縫——第二話里歐的「隱形只隱一半」分鏡完全
+    正確,圖卻畫成一隻完整的橘貓,讀分鏡檔案永遠看不出來。
+
+    規則與抓得到什麼在 story/verify.md。**不擋落檔**:判定寫進 PR 內文給人看,
+    人才是閘門。機器判錯而擋掉整話,比漏報一頁還糟——重跑一話是 36 分鐘。
+    """
+    key = os.environ.get('CODEX_IMAGE_KEY')
+    if not key:
+        print('沒有 CODEX_IMAGE_KEY,跳過視覺驗收')
+        return []
+    sys.path.insert(0, str(ROOT / 'scripts'))
+    try:
+        import verify_pages
+        rules = verify_pages.load_rules()
+        check = verify_pages.check_page_service
+    except Exception as e:
+        print(f'視覺驗收跳過(載不進來): {str(e)[:160]}', flush=True)
+        return []
+
+    out = []
+    for pg in plan['pages']:
+        img = ROOT / f'images/ep{n}' / f"{pg['n']}.webp"
+        if not img.is_file():
+            continue
+        try:
+            verdict, secs, text = check(img, rules)
+        except Exception as e:
+            # 驗收器自己壞掉要說出來,不能靜靜地當成這一話沒問題。
+            out.append((pg['n'], 'ERR', f'驗收沒跑成功:{str(e)[:160]}'))
+            print(f'  {pg["n"]} 驗收失敗: {str(e)[:160]}', flush=True)
+            continue
+        detail = ' / '.join(l.strip() for l in text.splitlines() if '違規' in l)
+        out.append((pg['n'], verdict, detail))
+        print(f'  {pg["n"]} {verdict} {secs:.0f}s {detail}', flush=True)
+    return out
+
 def publish(plan, n, has_cover):
     """落檔:圖已經在 images/epN/ 了,這裡處理分鏡、episodes.json 與 build。"""
     (ROOT / 'story' / f'ep{n}.md').write_text(render_storyboard(plan, n), 'utf-8')
@@ -1166,8 +1221,11 @@ def main(argv=None):
             generate_with_retry(pg['n'], page_refs(pg), page_body(pg), out)
     has_cover = cover_path.is_file()
 
+    verdicts = verify_episode(n, plan) if not a.skip_images else []
+
     publish(plan, n, has_cover)
-    (ROOT / f'.pr-body-ep{n}.md').write_text(pr_body(plan, n, wishes, wish_err), 'utf-8')
+    (ROOT / f'.pr-body-ep{n}.md').write_text(
+        pr_body(plan, n, wishes, wish_err, verdicts=verdicts), 'utf-8')
     clear_cached_plan(n)          # 落檔成功,這一話的續傳狀態不再需要
     print('落檔完成。PR 內文在 .pr-body-ep%d.md' % n)
     return 0
