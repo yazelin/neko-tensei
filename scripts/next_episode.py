@@ -1250,7 +1250,11 @@ def verify_episode(n, plan):
             out.append((name, 'ERR', f'驗收沒跑成功:{str(e)[:160]}'))
             print(f'  {name} 驗收失敗: {str(e)[:160]}', flush=True)
             continue
-        detail = ' / '.join(l.strip() for l in text.splitlines() if '違規' in l)
+        # SPEAKER 是提示不是判決(見 story/verify.md):它的召回高、精確度低,
+        # 拿來當閘門會把大部分頁面判黑。但它確認抓到過真的畫錯,所以照樣列給人看。
+        detail = ' / '.join(
+            l.strip() for l in text.splitlines()
+            if '違規' in l or (l.strip().startswith('SPEAKER:') and '合格' not in l))
         out.append((name, verdict, detail))
         print(f'  {name} {verdict} {secs:.0f}s {detail}', flush=True)
     return out
