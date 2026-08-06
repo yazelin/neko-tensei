@@ -60,7 +60,10 @@ self.addEventListener('install', e => {
 self.addEventListener('activate', e => {
   e.waitUntil((async () => {
     const keys = await caches.keys();
-    await Promise.all(keys.filter(k => k !== SHELL && k !== ASSET).map(k => caches.delete(k)));
+    /* 只清自己的 nt-*:CacheStorage 是 per-origin,yazelin.github.io 底下所有專案共用
+       同一份(scope 只管 fetch,管不到快取)。無差別刪會把 gewu 的 33MB、token-unlimited
+       等別的專案離線包整包清掉,而且功能完全正常、毫無徵兆。 */
+    await Promise.all(keys.filter(k => k.startsWith('nt-') && k !== SHELL && k !== ASSET).map(k => caches.delete(k)));
     /* 一次性清理:舊版把 style.css / app.js 也寫進執行期 ASSET,而 ASSET 不隨
        部署 bump,那些過期副本會永遠蓋掉新版。把它們從 ASSET 挑掉。 */
     const a = await caches.open(ASSET);
