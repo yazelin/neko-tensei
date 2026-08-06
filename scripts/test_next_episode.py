@@ -1363,5 +1363,60 @@ class TestBackendDispatch(unittest.TestCase):
         self.assertIn('IMAGE_SAFETY', str(cm.exception))
 
 
+
+def _plan_with(*texts):
+    """只帶對白的最小企劃,給校對測試用。"""
+    return {'pages': [{'n': 1, 'panels': [
+        {'lines': [{'speaker': 'xiaobai', 'shape': 'OVAL', 'text': t}]} for t in texts]}]}
+
+
+class TestWordingProblems(unittest.TestCase):
+    """對白錯字校對。validate_plan 抓不到這一類——「完旦」是合法字元組成的
+    錯詞,寫成程式要有詞庫,而這個 repo 的紅線是不手維護字表。"""
+
+    def test_抓到錯字並帶出正確的詞(self):
+        with patch.object(ne, 'call_llm', lambda _: json.dumps({'problems': [
+                {'line': 1, 'wrong': '完旦', 'right': '完蛋'}]})):
+            errs = ne.wording_problems(_plan_with('完旦了！'))
+        self.assertEqual(len(errs), 1)
+        self.assertIn('完旦', errs[0])
+        self.assertIn('完蛋', errs[0])
+
+    def test_沒問題就是空清單(self):
+        with patch.object(ne, 'call_llm', lambda _: '{"problems": []}'):
+            self.assertEqual(ne.wording_problems(_plan_with('魔力回來了！')), [])
+
+    def test_原文裡沒有的詞一律丟掉(self):
+        # 模型偶爾會回一個原文根本沒出現的詞(實測把「還敢慶祝」讀成「慶視」)。
+        # 拿幻覺去擋掉一份好企劃,比漏掉一個錯字更糟。
+        with patch.object(ne, 'call_llm', lambda _: json.dumps({'problems': [
+                {'line': 1, 'wrong': '慶視', 'right': '慶祝'}]})):
+            self.assertEqual(ne.wording_problems(_plan_with('四隻空瓶子，還敢慶祝。')), [])
+
+    def test_校對器自己壞掉不擋整條線(self):
+        # 這是加分項,不該讓一話卡在校對器上。
+        def boom(_):
+            raise RuntimeError('planner down')
+        with patch.object(ne, 'call_llm', boom):
+            self.assertEqual(ne.wording_problems(_plan_with('完旦了！')), [])
+        with patch.object(ne, 'call_llm', lambda _: 'not json at all'):
+            self.assertEqual(ne.wording_problems(_plan_with('完旦了！')), [])
+
+    def test_沒有對白就不呼叫模型(self):
+        def boom(_):
+            raise AssertionError('不該被呼叫')
+        with patch.object(ne, 'call_llm', boom):
+            self.assertEqual(ne.wording_problems({'pages': []}), [])
+
+    def test_規則沒過就不浪費一次校對呼叫(self):
+        calls = []
+        with patch.object(ne, 'make_plan', lambda *a: {'nope': True}), \
+             patch.object(ne, 'validate_plan', lambda *a: ['頁數不對']), \
+             patch.object(ne, 'wording_problems', lambda p: calls.append(p) or []):
+            with self.assertRaises(RuntimeError):
+                ne.plan_with_retry({}, [], [], 6)
+        self.assertEqual(calls, [])
+
+
 if __name__ == '__main__':
     unittest.main()
