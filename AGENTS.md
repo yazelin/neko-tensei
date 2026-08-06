@@ -150,12 +150,17 @@ NODE_PATH=$(npm root -g) node scripts/verify-mobile.js
 
 # pipeline 單元測試
 python3 -B -m unittest discover -s scripts -p 'test_*.py'
+
+# 出圖後的視覺驗收（本機跑，要登入態的 Codex CLI）
+python3 scripts/verify_pages.py images/ep5/*.webp
+python3 scripts/verify_pages.py --regression   # 改規則後必跑
 ```
 
 企劃階段有一道**對白校對**（`wording_problems`）：把整話對白丟回企劃模型，問有沒有不成詞的錯字。`validate_plan` 管得了頁數、框型、簡繁、角色、道具 id，那些都能寫成規則；但「完旦」「逼」是合法字元組成的錯詞，要用程式抓得有詞庫，而這個 repo 的紅線是**不手維護字表**（當初手打的簡體表混進「那」「只」「反」，差點全擋）。用 LLM 判詞就不需要字表。
 
 **放在企劃階段是刻意的**：這裡是純文字，一次幾秒、不花出圖額度，抓到就重出企劃，錯字根本畫不到圖上。校對器自己失敗一律當作沒問題，只印一行警告——這是加分項，不該讓整條線停在校對器上。模型回報的錯詞若在原文裡找不到，也一律丟掉：實測它會把「還敢慶祝」讀成「慶視」，拿幻覺擋掉一份好企劃比漏一個錯字更糟。
 
+視覺驗收的規則正本在 [`story/verify.md`](story/verify.md)，**跟 `story/README.md` 的角色特徵表不是同一件事**：那份是給生圖用的，把「短毛、沒有蓬鬆圍領」寫進 prompt 能逼模型畫對；同一句話拿來事後判讀反而會誤判，因為這個畫風每隻貓都毛茸茸。**驗收只能用離散、看得見的道具當判準。** 改規則一定要跑 `--regression`，那份回歸集裡有陽性也有負控制，只看抓到幾個會嚴重高估品質。
 行動版驗收的 safe-area 檢查靠 `page.addInitScript()` 注入假的 inset 值——Chromium 的 device emulation 不模擬 `env(safe-area-inset-*)`，一律回 0，不注入就等於沒驗。
 
 沒有 `package.json`（playwright 用全域的），只有一個 pip 相依 `opencc-python-reimplemented`。**不要新增相依。**
