@@ -514,6 +514,7 @@ def _good_plan(n=3):
     return {
         'title': '黑塔上的另一個人',
         'desc': '四貓帶著通行證走向黑塔,塔上的魔法陣不是小次郎點的。',
+        'fantasy': 'a moss-covered stone golem guarding the tower gate',
         'beats': ['出發', '塔前受阻', '看見塔頂的人影'],
         'pages': [
             {'n': f'{i:02d}',
@@ -744,6 +745,69 @@ class TestValidate(unittest.TestCase):
         p['title'] = '   '
         errs = ne.validate_plan(p, 3, [])
         self.assertTrue(any('缺欄位:title' in e for e in errs), errs)
+
+
+class TestFantasyField(unittest.TestCase):
+    """異世界元素必填。
+
+    第二話到第六話連續五話的舞台都是機房,而 planner prompt 會把最近兩話的分鏡
+    整段餵進去要它接得上——純文字要求打不過示範。實測:prompt 加了「這是異世界
+    不是機房」之後,產出的企劃仍然是 server chamber + Code Review。
+    """
+
+    def test_沒填就擋下來(self):
+        p = _good_plan()
+        del p['fantasy']
+        self.assertTrue(any('fantasy' in e for e in ne.validate_plan(p, 3, [])))
+
+    def test_填機房那一類也擋(self):
+        for bad in ('a giant holographic screen', 'the server room core',
+                    'a floating code console'):
+            p = _good_plan()
+            p['fantasy'] = bad
+            errs = ne.validate_plan(p, 3, [])
+            self.assertTrue(any('機房那一類' in e for e in errs), (bad, errs))
+
+    def test_真的異世界元素放行(self):
+        p = _good_plan()
+        p['fantasy'] = 'a moss-covered stone golem guarding a ravine'
+        self.assertEqual([e for e in ne.validate_plan(p, 3, []) if 'fantasy' in e], [])
+
+
+class TestOffPanelRepair(unittest.TestCase):
+    """沒被點名的說話者自動補成畫外音。
+
+    模型在這條規則上收斂不了(回饋錯誤後從 17 處降到 1~3 處就卡住)。補成畫外音
+    是最保守的解讀:明說那句話不屬於畫面裡任何一隻,生圖端就不會自己補一隻。
+    """
+
+    def _panel(self, scene, *speakers):
+        return {'pages': [{'n': '01', 'panels': [
+            {'scene': scene, 'lines': [{'speaker': sp} for sp in speakers]}]}]}
+
+    def test_沒點名的補成畫外音(self):
+        plan = self._panel('ROGUE CAT types at the left.', 'leo', 'uncle')
+        repaired = ne.name_offpanel_speakers(plan)
+        scene = plan['pages'][0]['panels'][0]['scene']
+        self.assertIn('SAMURAI CAT speaks from off-panel', scene)
+        self.assertNotIn('ROGUE CAT speaks from off-panel', scene)  # 他本來就在
+        self.assertEqual(len(repaired), 1)
+
+    def test_群像格不動它(self):
+        plan = self._panel('Wide shot of all four cats.', 'uncle', 'leo')
+        self.assertEqual(ne.name_offpanel_speakers(plan), [])
+
+    def test_小次郎不算在四貓裡(self):
+        # 群像格寫 all four cats 不包含魔王,他要另外點名
+        plan = self._panel('Wide shot of all four cats.', 'kojiro')
+        self.assertEqual(len(ne.name_offpanel_speakers(plan)), 1)
+
+    def test_修補完就過得了驗證(self):
+        p = _good_plan()
+        p['pages'][0]['panels'][0]['lines'][0]['speaker'] = 'kojiro'
+        p['pages'][0]['panels'][0]['lines'][0]['shape'] = 'DEMON'
+        ne.name_offpanel_speakers(p)
+        self.assertEqual([e for e in ne.validate_plan(p, 3, []) if '畫面描述' in e], [])
 
 
 class TestPlannerPrompt(unittest.TestCase):
@@ -1160,15 +1224,16 @@ class TestRetry(unittest.TestCase):
 
     def test_第一次就過就不重試(self):
         calls = []
-        self._with_fake_plan(lambda canon, wishes: (calls.append(1), _good_plan())[1])
+        self._with_fake_plan(
+            lambda canon, wishes, previous_errors=None: (calls.append(1), _good_plan())[1])
         ne.plan_with_retry(ne.load_canon(), [], [], 3)
         self.assertEqual(len(calls), 1)
 
     def test_第一次不過會重試第二次(self):
         calls = []
 
-        def fake(canon, wishes):
-            calls.append(1)
+        def fake(canon, wishes, previous_errors=None):
+            calls.append(previous_errors)
             if len(calls) == 1:
                 bad = _good_plan()
                 bad['pages'] = bad['pages'][:3]
@@ -1180,9 +1245,13 @@ class TestRetry(unittest.TestCase):
             plan = ne.plan_with_retry(ne.load_canon(), [], [], 3)
         self.assertEqual(len(calls), 2)
         self.assertEqual(plan['title'], _good_plan()['title'])
+        # 第一次沒有回饋,第二次要把上一版的錯誤帶進去——同一份 prompt 再擲一次
+        # 對系統性的錯沒用(「每格要點名說話者」那條連兩次漏在同樣的地方)
+        self.assertIsNone(calls[0] or None)
+        self.assertTrue(any('六頁' in e for e in calls[1]), calls[1])
 
-    def test_連兩次都不過就丟例外並帶上原因(self):
-        def fake(canon, wishes):
+    def test_連續不過就丟例外並帶上原因(self):
+        def fake(canon, wishes, previous_errors=None):
             bad = _good_plan()
             bad['pages'] = bad['pages'][:2]
             return bad
@@ -1414,7 +1483,7 @@ class TestWordingProblems(unittest.TestCase):
 
     def test_規則沒過就不浪費一次校對呼叫(self):
         calls = []
-        with patch.object(ne, 'make_plan', lambda *a: {'nope': True}), \
+        with patch.object(ne, 'make_plan', lambda *a, **kw: {'nope': True}), \
              patch.object(ne, 'validate_plan', lambda *a: ['頁數不對']), \
              patch.object(ne, 'wording_problems', lambda p: calls.append(p) or []):
             with self.assertRaises(RuntimeError):
