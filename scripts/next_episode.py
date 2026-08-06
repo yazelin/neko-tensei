@@ -108,6 +108,15 @@ def fetch_wishes():
 
 CHARS = {'xiaoniao', 'xiaobai', 'uncle', 'leo', 'kojiro'}
 
+# slug → scene 描述裡用的英文代號(cast.json 的 desc 就是 "MAGE CAT model sheet"
+# 這種形狀,去掉尾巴的 model sheet 就是代號)。生圖端讀的是 scene 那段英文,
+# 對白的 speaker 只是標籤,所以「誰在畫面上」完全由 scene 決定。
+CHAR_TAGS = {
+    slug: (prompt._CAST['cast'][slug]['desc'].split(' model sheet')[0].strip())
+    for slug in ('xiaoniao', 'xiaobai', 'uncle', 'leo', 'kojiro')
+    if slug in prompt._CAST.get('cast', {})
+}
+
 _SIMPLIFIED_MAP = None
 _TW_STANDARD = None
 
@@ -288,6 +297,29 @@ def validate_plan(plan, next_n, titles):
                 errs.append(f'第 {n} 頁指名了不存在的道具/場景:{w}'
                             f'(可用的:{"、".join(prompt.WORLD_KEYS) or "無"})')
 
+        # 有台詞的角色一定要出現在該格的 scene 裡。
+        #
+        # 第六話第 02 頁第一格就是這樣壞的:scene 只寫了 ROGUE CAT,卻掛著中年
+        # 攻城屍的台詞,SAMURAI CAT 從頭到尾沒被提到——生圖端讀的是 scene 那段
+        # 英文,speaker 只是給人看的標籤,所以模型只好自己補一隻,補成了小鳥不啾。
+        # 同一話六頁裡有四頁犯這個錯。這條是純字串比對,擋在出圖之前,零成本。
+        for panel in pg.get('panels') or []:
+            scene = (panel.get('scene') or '')
+            speakers = {ln.get('speaker') for ln in (panel.get('lines') or [])}
+            # 別名:企劃常寫 "KOJIRO holographic projection" 而不是完整的
+            # "DEMON KING CAT"。角色確實被點名了,純字串比對太死會退掉好企劃。
+            upper = scene.upper()
+            missing = sorted(
+                CHAR_TAGS[sp] for sp in speakers
+                if sp in CHAR_TAGS
+                and CHAR_TAGS[sp] not in scene
+                and sp.upper() not in upper
+            )
+            if missing:
+                errs.append(
+                    f'第 {n} 頁有格子讓「{"、".join(missing)}」說話,但畫面描述裡'
+                    f'沒有他:{scene[:80]}')
+
         page_shapes = []
         page_lines = 0
         for _n, speaker, shape, text in _lines({'pages': [pg]}):
@@ -408,6 +440,18 @@ def build_planner_prompt(canon, wishes):
 - 對白一律正體中文（台灣用語），一頁 3 到 6 句，句子不要長
 - kojiro 不可以用 THOUGHT 框，他沒有前世可以浮出來
 - 標題不可以跟既有話數重複
+- **每一格的 `scene` 必須點名這一格所有說話的角色,並寫出他們在畫面的位置。**
+  用英文代號:xiaoniao=MAGE CAT、xiaobai=SWORDSMAN CAT、uncle=SAMURAI CAT、leo=ROGUE CAT、kojiro=DEMON KING CAT。位置用相對詞(left / center / right / foreground /
+  behind)。生圖端讀的是 `scene` 那段英文,`speaker` 只是給人看的標籤——沒被
+  `scene` 提到的角色,模型會自己補一隻,而它補出來的通常是別人。第六話六頁裡
+  有四頁犯這個錯,「老夫」的台詞連續被畫給戴眼鏡的小鳥不啾。
+  寫成「SAMURAI CAT stands at the right, hands raised in panic, while ROGUE CAT
+  types at the left」這種,不要只寫一隻然後掛三句別人的台詞
+- **這是異世界,不是機房。** 每一話至少要有一樣**只有異世界才有**的東西真的出現
+  在畫面上:怪物、魔法戰鬥、地形、村民 NPC、非現實的道具。工程師的哏是這部的
+  笑點來源,但它只能當**比喻**——魔力是配給的、黑塔會例行維護——不可以整話
+  的舞台就是一個機房、四隻貓圍著螢幕打字。落差要成立,異世界那一邊得真的存在。
+  最近幾話已經連續五話都在辦公室裡,這一話要把場景拉回異世界
 - **`scene` 裡的動作要用手做**。這五隻是擬人化的貓，站著、有手、會拿東西——
   拔插頭就用手拔，不要寫「用貓牙咬住電纜扯出來」「用後腿把電纜踢回插座」。
   第三話第 04 頁就是這樣出事的：模型很聽話地照畫，姿勢卡在中間，人看一眼
