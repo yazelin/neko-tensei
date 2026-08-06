@@ -21,18 +21,18 @@
 |---|---|---|---|
 | top | SWORDSMAN CAT proudly holds up THE PASS - the round black medallion with a red rim and a flat red three-balled emblem - in front of a massive iron gate of the black tower, looking ultra confident. | 小白++「有小次郎的通行證，這塔我們直接橫著走！」 | SHOUT |
 | mid | SWORDSMAN CAT presses THE PASS - the round black medallion - into a round recess in a stone pedestal beside the gate; the pedestal emits a sharp high-pitched red light. | 中年攻城屍「小心點，這種地方通常有陷阱。」 | OVAL |
-|  |  | 小白++「逼——卡成功！」 | OVAL |
+|  |  | 小白++「嗶——卡成功！」 | OVAL |
 | bottom | A massive icy blue holographic warning screen pops up above the iron gate, flashing giant cold runes as all four cats shrink back in panic. | 里歐「等等，這個警示紅字……」 | TREMBLE |
 |  |  | 小鳥不啾「……它寫『系統即將於三分鐘後強制重啟』。」 | WEAK |
 
-參考圖：style、xiaobai、uncle、xiaoniao、leo
+參考圖：style、pass、tower、xiaobai、uncle、xiaoniao、leo
 
 ```
 PANEL 1 (top): SWORDSMAN CAT proudly holds up THE PASS - the round black medallion with a red rim and a flat red three-balled emblem - in front of a massive iron gate of the black tower, looking ultra confident.
   SHOUT BALLOON from xiaobai: 有小次郎的通行證，這塔我們直接橫著走！
 PANEL 2 (middle): SWORDSMAN CAT presses THE PASS - the round black medallion - into a round recess in a stone pedestal beside the gate; the pedestal emits a sharp high-pitched red light.
   OVAL BALLOON from uncle: 小心點，這種地方通常有陷阱。
-  OVAL BALLOON from xiaobai: 逼——卡成功！
+  OVAL BALLOON from xiaobai: 嗶——卡成功！
 PANEL 3 (bottom): A massive icy blue holographic warning screen pops up above the iron gate, flashing giant cold runes as all four cats shrink back in panic.
   TREMBLE BALLOON from leo: 等等，這個警示紅字……
   WEAK BALLOON from xiaoniao: ……它寫『系統即將於三分鐘後強制重啟』。
