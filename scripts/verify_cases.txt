@@ -23,10 +23,14 @@ HEAD:images/ep3/02.webp PASS 同頁修好版
 HEAD:images/ep3/06.webp PASS 同頁修好版
 HEAD:images/ep4/02.webp PASS 同頁修好版
 
+# 2026-08-06 補記:加了「逐格對照劇本的說話者」那條規則之後,才發現 ep3/04
+# 一直有說話者錯置。它本來被當成負控制——「沒有已知問題」不等於「乾淨」,
+# 當時只是還沒有能看見這一類的工具。修好就改回 PASS。
+
 # ── 負控制:其他上線頁 ──────────────────────────────────────────
 HEAD:images/ep2/03.webp PASS 上線版本
 HEAD:images/ep2/05.webp PASS 上線版本
-HEAD:images/ep3/04.webp PASS 上線版本
+HEAD:images/ep3/04.webp FAIL 站上真的有錯:第 2 格「救命,老夫看不見了!」被畫成小鳥不啾
 HEAD:images/ep4/05.webp PASS 上線版本
 HEAD:images/ep5/02.webp PASS 上線版本
 HEAD:images/ep5/04.webp PASS 上線版本

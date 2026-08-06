@@ -730,6 +730,12 @@ def pr_body(plan, n, wishes, wish_err=None, branch=None, verdicts=None):
                '劇情在文字層通常沒問題，會出事的是「劇本寫的」跟「圖畫出來的」之間那道縫——'
                '第二話里歐的「隱形只隱一半」就是分鏡完全正確、圖卻畫成一隻完整的橘貓，'
                '整頁的笑點沒了，而讀分鏡檔案完全看不出來。\n')
+    cover = ROOT / f'images/ep{n}/00-cover.webp'
+    if cover.is_file():
+        # 封面本來完全沒出現在 PR 裡,而它跟內頁一樣是生成的、一樣會出錯。
+        out.append('\n### 封面\n')
+        out.append(f'![封面](https://raw.githubusercontent.com/yazelin/neko-tensei/'
+                   f'{branch}/images/ep{n}/00-cover.webp)\n')
     for pg in plan['pages']:
         out.append(f"\n### 第 {pg['n']} 頁\n")
         out.append(f"![第 {pg['n']} 頁]"
@@ -1096,20 +1102,27 @@ def verify_episode(n, plan):
         return []
 
     out = []
-    for pg in plan['pages']:
-        img = ROOT / f'images/ep{n}' / f"{pg['n']}.webp"
+    # 封面也要驗。它跟內頁走同一套角色設定,一樣會把眼鏡戴到別人臉上;第六話
+    # 就是因為這裡只跑 plan['pages'],封面完全沒被看過。沒有對白所以不傳劇本,
+    # 規則 B 會自己跳過。
+    pages = [('00-cover', '')] + [(pg['n'], page_body(pg)) for pg in plan['pages']]
+    for name, context in pages:
+        img = ROOT / f'images/ep{n}' / f"{name}.webp"
         if not img.is_file():
             continue
         try:
-            verdict, secs, text = check(img, rules)
+            # 把這一頁的劇本一起送過去。說話者被畫成另一個角色是這條產線最常
+            # 見的錯,而圖本身看起來完全正常——沒有劇本可以對照,那一類永遠
+            # 抓不到(第六話第 02、03 頁就是這樣漏掉的)。
+            verdict, secs, text = check(img, rules, context)
         except Exception as e:
             # 驗收器自己壞掉要說出來,不能靜靜地當成這一話沒問題。
-            out.append((pg['n'], 'ERR', f'驗收沒跑成功:{str(e)[:160]}'))
-            print(f'  {pg["n"]} 驗收失敗: {str(e)[:160]}', flush=True)
+            out.append((name, 'ERR', f'驗收沒跑成功:{str(e)[:160]}'))
+            print(f'  {name} 驗收失敗: {str(e)[:160]}', flush=True)
             continue
         detail = ' / '.join(l.strip() for l in text.splitlines() if '違規' in l)
-        out.append((pg['n'], verdict, detail))
-        print(f'  {pg["n"]} {verdict} {secs:.0f}s {detail}', flush=True)
+        out.append((name, verdict, detail))
+        print(f'  {name} {verdict} {secs:.0f}s {detail}', flush=True)
     return out
 
 def publish(plan, n, has_cover):

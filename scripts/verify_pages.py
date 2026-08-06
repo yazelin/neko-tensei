@@ -64,7 +64,14 @@ def verdict_of(output):
     return found[-1] if found else "ERR"
 
 
-def check_page_service(image, rules):
+def _with_context(rules, context):
+    """把該頁的劇本接在規則後面。沒有劇本就原樣送出(規則 B 會自己跳過)。"""
+    if not context:
+        return rules
+    return f"{rules}\n\n這一頁的劇本（規則 B 用這個對照）：\n{context}"
+
+
+def check_page_service(image, rules, context=""):
     """走 .11 的 codex-image-service `/v1/vision`。CI 上唯一能用的路。
 
     GitHub Actions 沒有登入態的 Codex CLI,但那個服務有——它底層跑的是同一個
@@ -73,7 +80,7 @@ def check_page_service(image, rules):
     key = os.environ['CODEX_IMAGE_KEY']
     base = os.environ.get('CODEX_IMAGE_BASE_URL') or 'https://ching-tech.ddns.net/codex-image'
     body = json.dumps({
-        'prompt': rules,
+        'prompt': _with_context(rules, context),
         'images_base64': [base64.b64encode(pathlib.Path(image).read_bytes()).decode()],
     }).encode()
     req = urllib.request.Request(
@@ -96,14 +103,14 @@ def pick_backend(name):
     return check_page
 
 
-def check_page(image, rules):
+def check_page(image, rules, context=""):
     """跑一頁,回 (verdict, 秒數, 完整輸出)。"""
     started = time.time()
     # stdin 一定要關掉:codex exec 會等 stdin,不給就永遠掛著(不是模型慢)。
     proc = subprocess.run(
         ["codex", "exec", "--skip-git-repo-check", "--sandbox", "read-only",
          "-m", MODEL, "-c", 'model_reasoning_effort="medium"',
-         "--image", str(image), "--", rules],
+         "--image", str(image), "--", _with_context(rules, context)],
         capture_output=True, text=True, stdin=subprocess.DEVNULL,
     )
     output = proc.stdout + proc.stderr

@@ -1453,6 +1453,25 @@ class TestVerifySection(unittest.TestCase):
 
 
 class TestVerifyEpisode(unittest.TestCase):
+    def test_封面也要驗(self):
+        # 第六話的封面完全沒被驗過也沒出現在 PR 裡,因為這裡只跑 plan['pages']
+        seen = []
+
+        def fake_check(img, rules, context):
+            seen.append(pathlib.Path(img).name)
+            return 'PASS', 1.0, 'VERDICT: PASS'
+
+        plan = {'pages': [{'n': '01', 'panels': [], 'world': []}]}
+        with patch.dict(os.environ, {'CODEX_IMAGE_KEY': 'x'}), \
+             patch.object(ne.pathlib.Path, 'is_file', lambda self: True), \
+             patch.object(ne, 'page_body', lambda pg: 'PANEL 1: ...'):
+            import verify_pages
+            with patch.object(verify_pages, 'check_page_service', fake_check), \
+                 patch.object(verify_pages, 'load_rules', lambda: '規則'):
+                ne.verify_episode(6, plan)
+        self.assertIn('00-cover.webp', seen)
+        self.assertIn('01.webp', seen)
+
     def test_沒有金鑰就跳過(self):
         with patch.dict(os.environ, {}, clear=True):
             self.assertEqual(ne.verify_episode(6, {'pages': []}), [])
