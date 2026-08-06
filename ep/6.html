@@ -1,108 +1,86 @@
 <!doctype html><html lang="zh-Hant-TW"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>轉生成貓貓的我們｜異世界貓貓漫畫</title>
-<meta name="description" content="四位深夜加班的工程師，被螢幕裡的魔法陣吸進異世界，醒來全變成了貓。誕生於 LINE C# 社群閒聊的連載漫畫，第二話「魔力不足，得加 Token！」上線。">
-<link rel="canonical" href="https://yazelin.github.io/neko-tensei/">
-<meta property="og:type" content="website">
+<title>第六話：Merge Conflict 的石巨人｜轉生成貓貓的我們</title>
+<meta name="description" content="修 Bug 小隊剛準備提交 PR，黑塔防禦機制竟召喚出由衝突程式碼構成的巨大石巨人！ 轉生成貓貓的我們，第六話：Merge Conflict 的石巨人完整閱讀。">
+<link rel="canonical" href="https://yazelin.github.io/neko-tensei/ep/6.html">
+<meta property="og:type" content="article">
 <meta property="og:site_name" content="轉生成貓貓的我們">
 <meta property="og:locale" content="zh_TW">
-<meta property="og:title" content="轉生成貓貓的我們｜異世界貓貓漫畫">
-<meta property="og:description" content="四位深夜加班的工程師，被螢幕裡的魔法陣吸進異世界，醒來全變成了貓。誕生於 LINE C# 社群閒聊的連載漫畫。">
-<meta property="og:url" content="https://yazelin.github.io/neko-tensei/">
+<meta property="og:title" content="第六話：Merge Conflict 的石巨人｜轉生成貓貓的我們">
+<meta property="og:description" content="修 Bug 小隊剛準備提交 PR，黑塔防禦機制竟召喚出由衝突程式碼構成的巨大石巨人！">
+<meta property="og:url" content="https://yazelin.github.io/neko-tensei/ep/6.html">
 <meta property="og:image" content="https://yazelin.github.io/neko-tensei/assets/og.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="轉生成貓貓的我們｜異世界貓貓漫畫">
-<meta name="twitter:description" content="四位深夜加班的工程師，醒來全變成了貓。LINE C# 社群共創漫畫。">
+<meta name="twitter:title" content="第六話：Merge Conflict 的石巨人｜轉生成貓貓的我們">
+<meta name="twitter:description" content="修 Bug 小隊剛準備提交 PR，黑塔防禦機制竟召喚出由衝突程式碼構成的巨大石巨人！">
 <meta name="twitter:image" content="https://yazelin.github.io/neko-tensei/assets/og.jpg">
-<link rel="manifest" href="manifest.json">
+<link rel="manifest" href="../manifest.json">
 <meta name="theme-color" content="#12141d">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="貓貓轉生">
-<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
-<link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png">
-<link rel="apple-touch-icon" href="assets/icon-180.png">
-<link rel="stylesheet" href="style.css">
-<script src="app.js" defer></script>
+<link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="../assets/icon-192.png">
+<link rel="apple-touch-icon" href="../assets/icon-180.png">
+<link rel="stylesheet" href="../style.css">
+<script src="../app.js" defer></script>
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"ComicSeries",
-"name":"轉生成貓貓的我們","inLanguage":"zh-Hant-TW",
+{"@context":"https://schema.org","@type":"ComicIssue","issueNumber":6,
+"name":"第六話：Merge Conflict 的石巨人","inLanguage":"zh-Hant-TW",
 "author":{"@type":"Person","name":"林亞澤"},
-"description":"四位深夜加班的工程師被魔法陣吸進異世界，醒來全變成了貓。誕生於 LINE C# 社群閒聊、與 AI 擎添助理共創的連載漫畫。",
-"url":"https://yazelin.github.io/neko-tensei/",
+"isPartOf":{"@type":"ComicSeries","name":"轉生成貓貓的我們","url":"https://yazelin.github.io/neko-tensei/"},
+"url":"https://yazelin.github.io/neko-tensei/ep/6.html",
 "image":"https://yazelin.github.io/neko-tensei/assets/og.jpg"}
 </script>
-</head><body data-home>
+</head><body data-ep="6">
 
-<div class="wrap">
-  <header class="hero">
-    <h1>轉生成<span class="neko">貓貓</span>的我們</h1>
-    <p class="tag">深夜加班的四位工程師，醒來發現自己長出了肉球。</p>
-<!--latest:start-->
-      <a class="cover" href="ep/1.html" aria-label="開始閱讀第一話">
-        <img src="images/ep1/00-cover.webp" width="1024" height="1536"
-             alt="第一話封面：小鳥不啾、小白++、中年攻城屍、里歐，四位貓貓冒險者集結" fetchpriority="high">
-      </a>
-      <div>
-        <a class="btn" href="ep/1.html">開始閱讀 第一話</a>
-        <button class="btn ghost" id="inst" type="button">安裝到手機</button>
-      </div>
-      <p class="newest">最新：<a href="ep/6.html">第六話 Merge Conflict 的石巨人</a></p><!--latest:end-->
-  </header>
+<nav class="reader-top">
+  <a class="back" href="../" aria-label="回首頁">‹</a>
+  <span class="ttl">第六話：Merge Conflict 的石巨人</span>
+  <a class="chars" href="../#characters" aria-label="角色"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-4 0-8 2-8 5v1h16v-1c0-3-4-5-8-5z"/></svg></a>
+  <a class="eps" href="../#episodes" aria-label="話數">☰</a>
+</nav>
 
-  <section id="episodes">
-    <h2>話數</h2>
-    <ul class="ep-list">
-<!--episodes:start-->
-      <li><a href="ep/6.html"><span class="no">第六話</span><span>Merge Conflict 的石巨人</span><small>2026-08-06</small></a></li>
-      <li><a href="ep/5.html"><span class="no">第五話</span><span>魔王的備份資料庫</span><small>2026-08-04</small></a></li>
-      <li><a href="ep/4.html"><span class="no">第四話</span><span>Legacy Code 的遺跡！</span><small>2026-08-01</small></a></li>
-      <li><a href="ep/3.html"><span class="no">第三話</span><span>伺服器重啟中！</span><small>2026-07-31</small></a></li>
-      <li><a href="ep/2.html"><span class="no">第二話</span><span>魔力不足，得加 Token！</span><small>2026-07-30</small></a></li>
-      <li><a href="ep/1.html"><span class="no">第一話</span><span>我們怎麼變成貓了？！</span><small>2026-07-30</small></a></li>
-      <li><div class="soon"><span class="no">第七話</span><span>那座黑塔上的魔法陣，又是誰點亮的？</span></div></li><!--episodes:end-->
-    </ul>
-  </section>
+<main class="reader">
+  <h1 style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">第六話：Merge Conflict 的石巨人</h1>
+  <img id="p0" src="../images/ep6/00-cover.webp"
+       width="1024" height="1536" fetchpriority="high"
+       alt="第六話封面：Merge Conflict 的石巨人">
+  <img id="p1" src="../images/ep6/01.webp"
+       width="1024" height="1536" loading="lazy"
+       alt="SWORDSMAN CAT (center-left) slams his front paw onto a glowing crystal terminal inside the tower server vault, while MAGE CAT (center-right) holds her magic staff. SAMURAI CAT (far">
+  <img id="p2" src="../images/ep6/02.webp"
+       width="1024" height="1536" loading="lazy"
+       alt="Wide dramatic outdoor shot. On the fog-covered stone bridge, a massive mossy stone golem towers over all four cats. SAMURAI CAT stands at the center-front drawing his sword, SWORDS">
+  <img id="p3" src="../images/ep6/03.webp"
+       width="1024" height="1536" loading="lazy"
+       alt="MAGE CAT stands in the background adjusting her gold-rimmed glasses, observing glowing magic runes on the stone golem&#x27;s chest. ROGUE CAT stands in the foreground, throwing three gl">
+  <img id="p4" src="../images/ep6/04.webp"
+       width="1024" height="1536" loading="lazy"
+       alt="SAMURAI CAT (left) slashes the golem&#x27;s left shoulder rune with sword aura, while SWORDSMAN CAT (right) strikes the right shoulder rune simultaneously in dynamic motion.：中年攻城屍「一刀流·手">
+  <img id="p5" src="../images/ep6/05.webp"
+       width="1024" height="1536" loading="lazy"
+       alt="A massive blinding white explosion of energy erupts from the stone golem&#x27;s chest. The stone golem crumbles into harmless tiny glowing rock fragments. SAMURAI CAT speaks from off-pa">
+  <img id="p6" src="../images/ep6/06.webp"
+       width="1024" height="1536" loading="lazy"
+       alt="Inside the server control room, a giant crimson holographic shadow projection of DEMON KING CAT (Arasaka Kojiro) with glowing red eyes appears above the main console, arms crossed ">
+  <p class="credit">劇情與作畫：Claude × gpt-image-2</p>
+  <nav class="reader-nav">
+    <a class="btn ghost" href="../">回首頁</a>
+    <a class="btn ghost" href="5.html">上一話</a>
+    <span class="btn ghost" aria-disabled="true" style="opacity:.45">第七話 未完待續……</span>
+  </nav>
+</main>
 
-  <section id="characters">
-    <h2>角色</h2>
-    <ul class="cards">
-      <li><a href="char/xiaoniao.html"><img src="images/char-xiaoniao.webp" loading="lazy" alt="小鳥不啾：前世女工程師，轉生為緬因貓大法師">
-        <span class="cap">小鳥不啾<small>大法師．第一個覺醒魔法</small></span></a></li>
-      <li><a href="char/xiaobai.html"><img src="images/char-xiaobai.webp" loading="lazy" alt="小白++：前世熱血菜鳥工程師，轉生為虎斑小貓劍士">
-        <span class="cap">小白++<small>劍士．必勝頭帶的浪漫</small></span></a></li>
-      <li><a href="char/uncle.html"><img src="images/char-uncle.webp" loading="lazy" alt="中年攻城屍：前世資深工程師，轉生為白虎武士貓">
-        <span class="cap">中年攻城屍<small>武士．讓老夫來</small></span></a></li>
-      <li><a href="char/leo.html"><img src="images/char-leo.webp" loading="lazy" alt="里歐：前世冷靜帥哥工程師，轉生為橘貓盜賊">
-        <span class="cap">里歐<small>盜賊．堅稱自己不是橘貓</small></span></a></li>
-      <li><a href="char/kojiro.html"><img src="images/char-kojiro.webp" loading="lazy" alt="荒坂小次郎對照圖：左為看不出是誰的黑色剪影，右為紅眼魔王貓">
-        <span class="cap">荒坂小次郎<small>魔王．紅眼的配給者</small></span></a></li>
-    </ul>
-  </section>
+<section class="wrap talk">
+  <h2>這一話的討論</h2>
+  <div id="giscus" data-category-id="DIC_kwDOToGp784DCVjJ" data-mapping="pathname"></div>
+</section>
 
-  <section id="wish">
-    <h2>劇情許願</h2>
-    <div class="origin">
-      <p>想看哪隻貓出場、想要什麼樣的展開、覺得哪個哏該回收——寫在下面。這一串會被拿去當下一話的參考。</p>
-      <p>需要 GitHub 帳號才能留言，這是為了擋廣告，沒有別的意思。</p>
-    </div>
-    <div id="giscus" data-category-id="DIC_kwDOToGp784DCVjL" data-mapping="specific" data-term="劇情許願"></div>
-  </section>
-
-  <section id="origin">
-    <h2>誕生故事</h2>
-    <div class="origin">
-      <p>二〇二六年七月三十日，<a href="https://line.me/ti/g2/PmukABqgPFrk7tMm8qt3AtHyvtNPY4dVd1HRXw" target="_blank" rel="noopener">LINE 的 C# 社群</a>裡一場再普通不過的閒聊。聊著聊著，群友的暱稱一個個變成了角色。我把這些哏講給 AI「<a href="https://ai.ching-tech.com/ctos-lite" target="_blank" rel="noopener">擎添助理</a>」聽、請它畫成漫畫原畫初稿，再貼回群裡跟大家分享。</p>
-      <p>後續由 Claude 搭配 gpt-image-2 接手：做成可離線閱讀的網站、補上角色頁，並生成第二話的內容。</p>
-      <p>於是有了這部作品：四位深夜加班的工程師，被螢幕裡浮現的魔法陣吸進異世界，醒來發現自己全變成了貓。魔法、利爪、武士刀與隱形術，還有一隻打不死的果凍史萊姆。</p>
-      <p>第二話的封面由社群裡的荒坂小次郎親手畫成——交稿之後大家才發現，那隻紅眼睛的魔王貓就是他自己。</p>
-      <p>角色都以群友暱稱命名，故事還在繼續，未來也可能有新的夥伴加入。</p>
-    </div>
-  </section>
-</div>
+<div class="progress" aria-hidden="true"><i></i><span>1/7</span></div>
 
 <footer>
   <div class="footer-icons">
@@ -119,32 +97,6 @@
   <p>圖文授權 CC BY-NC 4.0．林亞澤與 <a href="https://line.me/ti/g2/PmukABqgPFrk7tMm8qt3AtHyvtNPY4dVd1HRXw" target="_blank" rel="noopener">LINE C# 社群</a> 群友</p>
 </footer>
 
-<script>
-
-/* 安裝鈕：只有「真的裝了」才永久隱藏。
-   使用者自己點的按鈕,取消原生對話框不做任何持久靜音——
-   同次瀏覽先收起(事件已被消耗,無法再 prompt),Chrome 重發事件或下次載入就會再出現。 */
-(function(){
-  var KEY='nt-install', btn=document.getElementById('inst'), deferred=null;
-  var v=localStorage.getItem(KEY);
-  if(v && v!=='installed')localStorage.removeItem(KEY);   // 清掉舊版寫入的 14 天靜音時間戳
-  window.addEventListener('beforeinstallprompt',function(e){
-    e.preventDefault(); deferred=e;
-    if(localStorage.getItem(KEY)!=='installed')btn.classList.add('show');
-  });
-  btn.addEventListener('click',function(){
-    if(!deferred)return;
-    deferred.prompt();
-    deferred.userChoice.then(function(r){
-      if(r.outcome==='accepted')localStorage.setItem(KEY,'installed');
-      btn.classList.remove('show'); deferred=null;
-    });
-  });
-  window.addEventListener('appinstalled',function(){
-    localStorage.setItem(KEY,'installed'); btn.classList.remove('show');
-  });
-})();
-</script>
 <!-- yz-promo-footer v9 | 三件套+BMC 注意力效果 | https://github.com/yazelin/promo-footer-skill -->
 <script>
 (function(){"use strict";
