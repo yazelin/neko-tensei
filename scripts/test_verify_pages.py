@@ -52,5 +52,20 @@ class TestRules(unittest.TestCase):
                 self.assertIn("不要用毛量", line)
 
 
+class TestContext(unittest.TestCase):
+    """規則 B 要對照劇本才成立,所以劇本是接在規則後面送進去的。"""
+
+    def test_有劇本就接在規則後面(self):
+        out = verify_pages._with_context("規則", "PANEL 1: ...")
+        self.assertIn("規則", out)
+        self.assertIn("這一頁的劇本", out)
+        self.assertIn("PANEL 1", out)
+
+    def test_沒有劇本就原樣送(self):
+        # 封面沒有對白,回歸集也不帶劇本;這時規則 B 會自己跳過,不能硬塞一個
+        # 空的「劇本」進去讓模型拿空表去比對。
+        self.assertEqual(verify_pages._with_context("規則", ""), "規則")
+
+
 if __name__ == "__main__":
     unittest.main()
