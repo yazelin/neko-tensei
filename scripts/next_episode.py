@@ -111,6 +111,13 @@ CHARS = {'xiaoniao', 'xiaobai', 'uncle', 'leo', 'kojiro'}
 # slug → scene 描述裡用的英文代號(cast.json 的 desc 就是 "MAGE CAT model sheet"
 # 這種形狀,去掉尾巴的 model sheet 就是代號)。生圖端讀的是 scene 那段英文,
 # 對白的 speaker 只是標籤,所以「誰在畫面上」完全由 scene 決定。
+# 四位主角。小次郎是魔王,不算在「四貓」裡。
+FOUR_CATS = ('xiaoniao', 'xiaobai', 'uncle', 'leo')
+
+# 群像格的說法。scene 這樣寫就代表四貓都在畫面上,不必逐一點名。
+GROUP_PHRASES = ('ALL FOUR CATS', 'FOUR CATS', 'THE FOUR HEROES', 'ALL FIVE CATS',
+                 'FIVE CATS')
+
 CHAR_TAGS = {
     slug: (prompt._CAST['cast'][slug]['desc'].split(' model sheet')[0].strip())
     for slug in ('xiaoniao', 'xiaobai', 'uncle', 'leo', 'kojiro')
@@ -268,6 +275,23 @@ def validate_plan(plan, next_n, titles):
     if errs:
         return errs
 
+    # 異世界元素必填,而且要真的是異世界的東西。
+    #
+    # 光在 prompt 裡要求沒有用:第二話到第六話連續五話的舞台都是機房,而
+    # planner prompt 會把「最近兩話的分鏡」整段餵進去要它接得上——文字要求
+    # 打不過示範。改成必填欄位,模型至少得**明說**這一話的異世界元素是什麼,
+    # 而且人在 PR 上看得到它填了什麼。
+    fantasy = (plan.get('fantasy') or '').strip()
+    if not fantasy:
+        errs.append('缺欄位:fantasy(這一話畫面上真的會出現的異世界元素)')
+    elif not any(c.isalpha() for c in fantasy):
+        errs.append(f'fantasy 要寫一句英文,拿到:{fantasy}')
+    else:
+        banned = [w for w in FANTASY_BANNED if w in fantasy.lower()]
+        if banned:
+            errs.append(f'fantasy 填的是機房那一類的東西({"、".join(banned)}):{fantasy}'
+                        '。要的是怪物、魔法戰鬥、地形、村民 NPC 這種只有異世界才有的')
+
     if plan['title'] in (titles or []):
         errs.append(f'標題與既有話數重複:{plan["title"]}')
 
@@ -309,11 +333,16 @@ def validate_plan(plan, next_n, titles):
             # 別名:企劃常寫 "KOJIRO holographic projection" 而不是完整的
             # "DEMON KING CAT"。角色確實被點名了,純字串比對太死會退掉好企劃。
             upper = scene.upper()
+            # 群像格:"all four cats standing together" 四貓都在畫面上,只是沒
+            # 逐一點名。這是合法寫法,不該被擋。小次郎不在「四貓」裡,他要另外
+            # 點名。
+            grouped = any(g in upper for g in GROUP_PHRASES)
             missing = sorted(
                 CHAR_TAGS[sp] for sp in speakers
                 if sp in CHAR_TAGS
                 and CHAR_TAGS[sp] not in scene
                 and sp.upper() not in upper
+                and not (grouped and sp in FOUR_CATS)
             )
             if missing:
                 errs.append(
@@ -375,6 +404,7 @@ _PLAN_SHAPE = """{
   "title": "不含「第N話」三個字的標題",
   "kind": "推進主線 | 日常番 | 烏龍 | 角色刻畫",
   "desc": "一到兩句,給網站 meta description 用",
+  "fantasy": "這一話畫面上真的會出現的異世界元素,一句英文。怪物/魔法戰鬥/地形/村民 NPC/非現實道具都算;螢幕、主機房、全像投影、程式碼不算",
   "beats": ["轉折一", "轉折二", "轉折三"],
   "pages": [
     { "n": "01",
@@ -388,6 +418,11 @@ _PLAN_SHAPE = """{
   ]
 }"""
 
+
+# fantasy 欄位不可以填這些——它們正是這部作品已經寫到爛的那一類。
+FANTASY_BANNED = ('server', 'hologram', 'holographic', 'screen', 'console',
+                  'terminal', 'code', 'commit', 'merge', 'pull request',
+                  'dashboard', 'keyboard', 'monitor', 'data center')
 
 EPISODE_KINDS = """這一話可以是下面任何一種，你自己選最適合的，不必每一話都推進主線：
 
@@ -406,10 +441,16 @@ def _world_hint():
     return '、'.join(f'{k}={v["name"]}' for k, v in w.items()) or '無'
 
 
-def build_planner_prompt(canon, wishes):
+def build_planner_prompt(canon, wishes, previous_errors=None):
     wish_block = ("社群這次的許願（要盡量收進去，收不進去的就留給以後）：\n"
                   + "\n".join(f'- {w}' for w in wishes)) if wishes else \
         '這次沒有社群許願，由你自己決定要畫什麼。'
+    retry_block = ''
+    if previous_errors:
+        retry_block = ('\n\n你上一版沒過驗證,以下每一條都要修掉再交:\n'
+                       + '\n'.join(f'- {e}' for e in previous_errors)
+                       + '\n這些不是建議,是硬性規則。修的時候不要只補一格,'
+                         '整份重看一遍有沒有同類問題。')
     return f"""你是《轉生成貓貓的我們》的編劇。請企劃第 {canon['next_n']} 話。
 
 這部作品的創作規範（必須遵守）：
@@ -446,17 +487,23 @@ def build_planner_prompt(canon, wishes):
   `scene` 提到的角色,模型會自己補一隻,而它補出來的通常是別人。第六話六頁裡
   有四頁犯這個錯,「老夫」的台詞連續被畫給戴眼鏡的小鳥不啾。
   寫成「SAMURAI CAT stands at the right, hands raised in panic, while ROGUE CAT
-  types at the left」這種,不要只寫一隻然後掛三句別人的台詞
+  types at the left」這種,不要只寫一隻然後掛三句別人的台詞。
+  兩種簡寫可以用:群像格寫 "all four cats" 就代表四貓都在(小次郎要另外點名);
+  **有人在畫外說話,就寫 "SAMURAI CAT speaks from off-panel"——一樣要點名**,
+  這樣生圖端才知道那句話不屬於畫面裡的任何一隻
 - **這是異世界,不是機房。** 每一話至少要有一樣**只有異世界才有**的東西真的出現
   在畫面上:怪物、魔法戰鬥、地形、村民 NPC、非現實的道具。工程師的哏是這部的
   笑點來源,但它只能當**比喻**——魔力是配給的、黑塔會例行維護——不可以整話
   的舞台就是一個機房、四隻貓圍著螢幕打字。落差要成立,異世界那一邊得真的存在。
-  最近幾話已經連續五話都在辦公室裡,這一話要把場景拉回異世界
+  最近幾話已經連續五話都在辦公室裡,這一話要把場景拉回異世界。
+  **`fantasy` 欄位要填你這一話真的會畫出來的那樣東西**(例:a moss-covered stone
+  golem guarding a ravine),而且它要在至少兩頁的 `scene` 裡真的出現。填螢幕、
+  主機房、全像投影、程式碼一律不算,那些是辦公室搬過來的
 - **`scene` 裡的動作要用手做**。這五隻是擬人化的貓，站著、有手、會拿東西——
   拔插頭就用手拔，不要寫「用貓牙咬住電纜扯出來」「用後腿把電纜踢回插座」。
   第三話第 04 頁就是這樣出事的：模型很聽話地照畫，姿勢卡在中間，人看一眼
   就知道不對。真要用嘴或用腳，得是刻意的笑點，而且要跟角色個性對得上
-  （小鳥不啾是冷靜吐槽型，不會又咬又踢）"""
+  （小鳥不啾是冷靜吐槽型，不會又咬又踢）{retry_block}"""
 
 
 def _strip_fence(s):
@@ -558,8 +605,8 @@ def _llm_gemini(text):
             f' payload 前 300 字:{json.dumps(payload, ensure_ascii=False)[:300]}') from None
 
 
-def make_plan(canon, wishes):
-    text = call_llm(build_planner_prompt(canon, wishes))
+def make_plan(canon, wishes, previous_errors=None):
+    text = call_llm(build_planner_prompt(canon, wishes, previous_errors))
     try:
         return json.loads(_strip_fence(text))
     except json.JSONDecodeError as e:
@@ -1086,24 +1133,63 @@ def wording_problems(plan):
     return errs
 
 
-def plan_with_retry(canon, wishes, titles, n):
-    """企劃不過就重試一次,再不過就放棄。
+PLAN_ATTEMPTS = 3
 
-    重試時不改 prompt——同一份 prompt 再擲一次,因為這是機率性輸出,
-    第一次不過通常不是 prompt 寫壞了。連兩次都不過才是真的有問題。
+
+def name_offpanel_speakers(plan):
+    """把沒被畫面描述點名的說話者,補成「在畫外說話」。回補過的清單。
+
+    模型在這條規則上就是收斂不了:回饋錯誤清單之後從 17 處降到 1 到 3 處,
+    再重試也還是在那個區間跳。與其擲骰子,不如直接修——而且**補成畫外音正好
+    是最保守的解讀**:明說那句話不屬於畫面裡的任何一隻,生圖端就不會自己補一隻
+    上去,那正是原本那個 bug(第六話六頁裡四頁的「老夫」都被畫給了小鳥不啾)。
+
+    代價是那一格少一個角色出鏡。但「少一隻」比「多一隻長得像別人的」好得多,
+    而且人在 PR 上看得到分鏡檔寫著 speaks from off-panel。
+    """
+    repaired = []
+    for pg in plan.get('pages') or []:
+        for panel in pg.get('panels') or []:
+            scene = panel.get('scene') or ''
+            upper = scene.upper()
+            grouped = any(g in upper for g in GROUP_PHRASES)
+            for sp in dict.fromkeys(ln.get('speaker') for ln in (panel.get('lines') or [])):
+                if sp not in CHAR_TAGS:
+                    continue
+                tag = CHAR_TAGS[sp]
+                if tag in scene or sp.upper() in upper or (grouped and sp in FOUR_CATS):
+                    continue
+                scene = f'{scene.rstrip()} {tag} speaks from off-panel.'
+                upper = scene.upper()
+                repaired.append(f'第 {pg.get("n")} 頁:{tag} 沒被畫面描述點名,補成畫外音')
+            panel['scene'] = scene
+    return repaired
+
+def plan_with_retry(canon, wishes, titles, n):
+    """企劃不過就重試,連 PLAN_ATTEMPTS 次都不過才放棄。
+
+    **重試時把上一次的錯誤清單附在 prompt 後面。** 原本是同一份 prompt 再擲一
+    次,理由是「機率性輸出,第一次不過通常不是 prompt 寫壞」——那對零星失誤
+    成立,但對系統性的錯不成立。「每格要點名說話者」這條上線那天,模型連兩次
+    都在同樣的地方漏,違規數 17 → 6 → 4,方向對但收斂不了;把「你上一版這幾格
+    漏了誰」直接告訴它,比期待它自己開竅有效得多。
+
+    只回饋錯誤、不改規則本身:規則放寬會把問題退回生圖端,那才是貴的地方。
     """
     errs = []
-    for attempt in (1, 2):
-        plan = make_plan(canon, wishes)
+    for attempt in range(1, PLAN_ATTEMPTS + 1):
+        plan = make_plan(canon, wishes, previous_errors=errs)
+        for line in name_offpanel_speakers(plan):
+            print(' 自動修補:', line)
         # 校對排在規則驗證之後:規則不過就沒必要再花一次 LLM 呼叫去校對一份
         # 本來就要重擲的企劃。
         errs = validate_plan(plan, n, titles) or wording_problems(plan)
         if not errs:
             return plan
-        print(f'企劃第 {attempt}/2 次沒過:')
+        print(f'企劃第 {attempt}/{PLAN_ATTEMPTS} 次沒過:')
         for e in errs:
             print(' -', e)
-    raise RuntimeError('企劃連兩次都沒過驗證:' + '；'.join(errs))
+    raise RuntimeError(f'企劃連 {PLAN_ATTEMPTS} 次都沒過驗證:' + '；'.join(errs))
 
 
 TW = zoneinfo.ZoneInfo('Asia/Taipei')
