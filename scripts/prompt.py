@@ -62,11 +62,16 @@ RULES = """DIALOGUE RULES - the most important part, follow exactly:
 - All text is TRADITIONAL CHINESE (zh-TW, Taiwan). Copy each string CHARACTER BY CHARACTER exactly as given. Never simplify a character, never substitute a similar-looking character, never invent extra characters, never leave a character out.
 - The text allowed in the whole image is exactly these three things: (1) the dialogue listed below; (2) the single character 貓 engraved on the samurai cat's gold medallion; (3) in-world English UI text that a PANEL description explicitly asks for - screens, holographic displays, progress bars, banners, signboards. Draw (3) exactly as the panel description spells it, in plain Latin letters, as part of the scenery.
 - Nothing else: no sound effects, no signature, no watermark, no page numbers, and never an English translation or transcription of the Chinese dialogue.
-- Keep balloons clear of the characters' faces."""
+- Keep balloons clear of the characters' faces.
+- EVERY balloon is labelled "from <name>". Place that balloon next to THAT character and point its tail at THAT character. Readers work out who is speaking from where the balloon sits, so a balloon floating above the wrong cat re-assigns the line to someone else - the page then reads as if a different character said it, even though every character is drawn correctly.
+- When a line comes from a character marked "speaks from off-panel", put that balloon at the panel edge on the side that character would be standing on, with its tail pointing off the panel - never at one of the visible cats.
+- If two characters speak in one panel, keep their balloons on their own sides; do not stack both balloons over the same cat."""
 
-REMINDER = ("FINAL CHECK before you draw: the balloons on this page must NOT all be the same shape. "
+REMINDER = ("FINAL CHECK before you draw: (1) the balloons on this page must NOT all be the same shape. "
             "Each balloon above is labelled SHOUT / OVAL / WEAK / TREMBLE / THOUGHT / DEMON / CAPTION - "
-            "draw exactly that shape for each one. A page where every balloon is a rounded rectangle is wrong.")
+            "draw exactly that shape for each one. A page where every balloon is a rounded rectangle is wrong. "
+            "(2) walk the balloons one by one and check each one sits beside the character named in its "
+            "\"from <name>\" label, with the tail pointing at that character.")
 
 
 COVER_RULES = """COVER TEXT RULES - the cover carries lettering, follow exactly:
