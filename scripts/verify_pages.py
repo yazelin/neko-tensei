@@ -117,6 +117,26 @@ def check_page(image, rules, context=""):
     return verdict_of(output), time.time() - started, output
 
 
+def storyboard_for(spec):
+    """從案例的 git spec 找出同一版的分鏡,取出那一頁的劇本。
+
+    規則 B(逐格對照說話者)要有劇本才成立。回歸集原本只餵圖,所以 B 永遠被跳過
+    ——ep3/04 那個「老夫的台詞被畫成小鳥不啾」的案例因此測不到,放在集合裡等於
+    白佔一格。圖與分鏡取同一個 ref,才不會拿新劇本對舊圖。
+    """
+    ref, _, path = spec.partition(":")
+    m = re.match(r"images/ep(\d+)/(\d+)\.webp$", path)
+    if not m:
+        return ""            # 封面之類沒有對白的頁
+    ep, page = m.groups()
+    md = subprocess.run(["git", "show", f"{ref}:story/ep{ep}.md"], cwd=ROOT,
+                        capture_output=True, text=True)
+    if md.returncode != 0:
+        return ""
+    block = re.search(rf"^## {page}$.*?```\n(.*?)```", md.stdout, re.S | re.M)
+    return block.group(1).strip() if block else ""
+
+
 def run_regression(rules, verbose, check=None):
     cases = parse_cases(CASES.read_text(encoding="utf-8"))
     print(f"{'頁面':<28}{'期望':<8}{'實得':<8}{'秒':<6}結果")
@@ -131,7 +151,8 @@ def run_regression(rules, verbose, check=None):
             image = pathlib.Path(tmp) / (spec.replace("/", "-").replace(":", "-"))
             image.write_bytes(blob.stdout)
 
-            got, secs, output = (check or check_page)(image, rules)
+            got, secs, output = (check or check_page)(
+                image, rules, storyboard_for(spec))
             ok = got == want
             hits.append(ok)
             label = spec.split(":")[-1].replace("images/", "")
