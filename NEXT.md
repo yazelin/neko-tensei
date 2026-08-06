@@ -82,3 +82,20 @@ NODE_PATH=$(npm root -g) node scripts/verify-mobile.js
 用全域的 playwright 跑 iPhone 13 實尺寸，自己起本機靜態伺服器，驗 DOM 與座標。目前 34 項。
 
 **注意**：safe-area 的檢查靠 `page.addInitScript()` 注入假的 inset 值——Chromium 的 device emulation 不模擬 `env(safe-area-inset-*)`，一律回 0，不注入就等於沒驗。進度條被撐成一片色塊那個 bug 就是被這個盲點放過去的。
+
+## 視覺驗收（2026-08-06 落地，尚未接進 Actions）
+
+`scripts/verify_pages.py` 只在本機跑，靠 `codex exec` 的視覺判讀，而那需要登入態的
+Codex CLI——Actions 上沒有。要讓 workflow 出圖後自動驗，得改走官方 Gemini API
+（`generativelanguage.googleapis.com`）。`.11` 的 gemini-web 中繼**不能用**：它的
+Gemini 相容端點只轉文字，圖片 part 會被丟掉（回 200 但模型收不到圖）。
+
+現況與已知邊界：
+
+- 回歸集 13/13（`--regression`）。實測每頁 9–17 秒，一話七頁約兩分鐘。
+- **抓得到**：眼鏡戴到別的角色身上、對白裡合法字組成的錯詞（「完旦」「逼」）、
+  狀聲字／頁碼／簽名。
+- **抓不到**：角色被畫得像另一個角色但仍分辨得出來（小白++ 被畫蓬鬆那類）。
+  四種規則寫法都漏抓，這是程度問題，沒有可寫死的判準，留人工。
+- **待修**：第三話第 01 頁第二格「逼——卡成功！」，刷卡的嗶聲寫成「逼」。
+  修完把 `scripts/verify_cases.txt` 裡那行改成 PASS。

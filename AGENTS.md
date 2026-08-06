@@ -150,7 +150,13 @@ NODE_PATH=$(npm root -g) node scripts/verify-mobile.js
 
 # pipeline 單元測試
 python3 -B -m unittest discover -s scripts -p 'test_*.py'
+
+# 出圖後的視覺驗收（本機跑，要登入態的 Codex CLI）
+python3 scripts/verify_pages.py images/ep5/*.webp
+python3 scripts/verify_pages.py --regression   # 改規則後必跑
 ```
+
+視覺驗收的規則正本在 [`story/verify.md`](story/verify.md)，**跟 `story/README.md` 的角色特徵表不是同一件事**：那份是給生圖用的，把「短毛、沒有蓬鬆圍領」寫進 prompt 能逼模型畫對；同一句話拿來事後判讀反而會誤判，因為這個畫風每隻貓都毛茸茸。**驗收只能用離散、看得見的道具當判準。** 改規則一定要跑 `--regression`，那份回歸集裡有陽性也有負控制，只看抓到幾個會嚴重高估品質。
 
 行動版驗收的 safe-area 檢查靠 `page.addInitScript()` 注入假的 inset 值——Chromium 的 device emulation 不模擬 `env(safe-area-inset-*)`，一律回 0，不注入就等於沒驗。
 
