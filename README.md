@@ -66,7 +66,7 @@ service worker 的 scope 與各自的慣例都要求如此。
 
 ## 主題曲
 
-〈貓貓進行曲〉在 [music.html](https://yazelin.github.io/neko-tensei/music.html)，獨立一頁的播放器：封面、逐行高亮的動態歌詞，加上一整塊 canvas 特效層（繞著封面的頻譜環、踩到拍子就往外擴的衝擊波、會被滑鼠推開的貓掌粒子）。
+〈貓貓進行曲〉在 [music.html](https://yazelin.github.io/neko-tensei/music.html)，首頁的 hero 按鈕與「主題曲」那張卡都連得過去。獨立一頁的播放器：封面、逐行高亮的動態歌詞，加上一整塊 canvas 特效層（繞著封面的頻譜環、踩到拍子就往外擴的衝擊波、會被滑鼠推開的貓掌粒子）。
 
 直播用的幾件事：
 
