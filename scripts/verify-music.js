@@ -178,6 +178,39 @@ function serve() {
           && new Set(icons.playing).size === 1 && icons.stopped[0] !== icons.playing[0],
           JSON.stringify(icons).slice(0, 90));
 
+    /* SEO 與 OG:分享出去長什麼樣沒人會盯著看,壞了也不會有人回報,所以用程式驗。
+       重點是 og:image 要真的存在、是 jpg(webp 有些平台不抓)、而且尺寸跟宣告一致。 */
+    const seo = await page.evaluate(async () => {
+      const m = (sel) => (document.querySelector(sel) || {}).content;
+      const og = m('meta[property="og:image"]');
+      const path = new URL(og).pathname.replace(/^\/[^/]+\//, './');
+      const r = await fetch(path, { method: 'GET' });
+      const dim = await new Promise(res => {
+        const i = new Image();
+        i.onload = () => res([i.naturalWidth, i.naturalHeight]);
+        i.onerror = () => res([0, 0]);
+        i.src = path;
+      });
+      let ld = null;
+      try { ld = JSON.parse(document.querySelector('script[type="application/ld+json"]').textContent); }
+      catch (_) {}
+      return { og, status: r.status, type: r.headers.get('content-type'), dim,
+               declared: [m('meta[property="og:image:width"]'), m('meta[property="og:image:height"]')],
+               canonical: (document.querySelector('link[rel=canonical]') || {}).href,
+               tw: m('meta[name="twitter:card"]'), site: m('meta[property="og:site_name"]'),
+               desc: (m('meta[name=description]') || '').length, ld: ld && ld['@type'] };
+    });
+    check('og:image 抓得到', seo.status === 200, `${seo.status} ${seo.og}`);
+    check('og:image 是 jpg 不是 webp', /jpeg|jpg/.test(seo.type || ''), seo.type);
+    check('og:image 尺寸跟宣告一致',
+          seo.dim.join('x') === seo.declared.join('x') && seo.dim[0] === 1200 && seo.dim[1] === 630,
+          `實際 ${seo.dim.join('x')} / 宣告 ${seo.declared.join('x')}`);
+    check('canonical 指到 music.html', /\/music\.html$/.test(seo.canonical || ''), seo.canonical);
+    check('twitter 大圖卡', seo.tw === 'summary_large_image', seo.tw);
+    check('og:site_name 跟站名一致', seo.site === '轉生成貓貓的我們', seo.site);
+    check('description 長度合理(60~160)', seo.desc >= 60 && seo.desc <= 160, `${seo.desc} 字`);
+    check('JSON-LD 是 MusicRecording', seo.ld === 'MusicRecording', String(seo.ld));
+
     check('沒有抓不到的檔案', missing.length === 0, missing.join(' | '));
     check('沒有 console 錯誤', errors.length === 0, errors.join(' | '));
   } finally {
