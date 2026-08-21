@@ -21,30 +21,36 @@
 html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--ink);overflow:hidden;
   font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
-  letter-spacing:.03em}
-/* 背景:同一張封面放大模糊,加一層暗罩,免得歌詞讀不出來 */
-.bg{position:fixed;inset:-8%;background:url(images/theme-song-cover.webp) center/cover;
-  filter:blur(48px) saturate(1.2) brightness(.55);transform:scale(1.1);z-index:0}
+  letter-spacing:.03em;
+  /* 按住拖曳是灑貓掌的手勢,不該順便把歌詞反白選起來 */
+  -webkit-user-select:none;user-select:none}
+/* 背景:同一張封面放大模糊,加一層暗罩,免得歌詞讀不出來。
+   --px/--py 是滑鼠視差,背景往反方向推一點點,才有景深。 */
+.bg{position:fixed;inset:-10%;background:url(images/theme-song-cover.webp) center/cover;
+  filter:blur(52px) saturate(1.25) brightness(.5);z-index:0;
+  transform:scale(1.14) translate3d(calc(var(--px,0)*-26px),calc(var(--py,0)*-26px),0);
+  transition:transform .5s cubic-bezier(.22,.61,.36,1)}
 .bg::after{content:"";position:absolute;inset:0;
-  background:radial-gradient(ellipse 70% 60% at 50% 40%,rgba(18,20,29,.45),rgba(18,20,29,.92))}
+  background:radial-gradient(ellipse 70% 60% at 50% 40%,rgba(18,20,29,.42),rgba(18,20,29,.93))}
+/* 特效層:頻譜環、節拍衝擊波、貓掌粒子全在這一塊 canvas 上 */
+#fx{position:fixed;inset:0;z-index:1;pointer-events:none}
 
 .stage{position:relative;z-index:2;height:100dvh;display:grid;
   grid-template-columns:minmax(0,42%) minmax(0,1fr);gap:clamp(1rem,4vw,3rem);
   align-items:center;padding:clamp(1rem,3vw,2.5rem) clamp(1rem,4vw,3rem)}
-@media (max-width:820px){
-  /* 上方那條是 fixed 的,padding-top 要留給它,不然封面會壓到「回漫畫首頁」 */
-  .stage{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr);
-    gap:.8rem;padding:3rem 1rem 1rem;align-content:start}
-}
 
 /* 左:封面與控制 */
-.side{display:flex;flex-direction:column;align-items:center;gap:1rem;min-width:0}
-.art{position:relative;width:min(100%,420px);aspect-ratio:1;border-radius:18px;
-  overflow:hidden;border:1px solid var(--line);
-  box-shadow:0 18px 60px rgba(0,0,0,.6),0 0 0 rgba(242,163,179,0);
-  transition:box-shadow .12s linear,transform .12s linear}
+.side{display:flex;flex-direction:column;align-items:center;gap:1.1rem;min-width:0}
+.art{position:relative;width:min(100%,400px);aspect-ratio:1;border-radius:18px;
+  overflow:hidden;border:1px solid var(--line);cursor:pointer;
+  box-shadow:0 18px 60px rgba(0,0,0,.6);
+  transform:perspective(900px) rotateY(calc(var(--px,0)*7deg)) rotateX(calc(var(--py,0)*-7deg)) scale(var(--kick,1));
+  transition:transform .18s cubic-bezier(.22,.61,.36,1)}
 .art img{width:100%;height:100%;object-fit:cover;display:block}
-@media (max-width:820px){.art{width:min(46vw,190px)}}
+/* 滑過封面時掃一道光 */
+.art::after{content:"";position:absolute;inset:0;opacity:0;transition:opacity .4s;
+  background:linear-gradient(115deg,transparent 38%,rgba(255,255,255,.22) 48%,transparent 58%)}
+.art:hover::after{opacity:1}
 .meta{text-align:center;line-height:1.5}
 .meta h1{font-family:"Noto Serif TC","Songti TC",Georgia,serif;
   font-size:clamp(1.3rem,3.4vw,2rem);margin:0 0 .25em;letter-spacing:.1em}
@@ -52,9 +58,8 @@ body{margin:0;background:var(--bg);color:var(--ink);overflow:hidden;
 .meta p a{color:var(--ink-dim);text-decoration:underline;text-underline-offset:3px}
 .meta p a:hover{color:var(--pink)}
 
-canvas#bars{width:min(100%,420px);height:54px;display:block;opacity:.85}
-
-.ctrl{display:flex;align-items:center;gap:.9rem;width:min(100%,420px)}
+.ctrl{display:flex;align-items:center;gap:.9rem;width:min(100%,400px);
+  transition:opacity .5s}
 button{font:inherit;color:var(--ink);background:none;border:0;cursor:pointer}
 .play{width:52px;height:52px;flex:none;border-radius:50%;
   background:linear-gradient(135deg,var(--gold),#d9a548);color:#241c08;
@@ -74,46 +79,54 @@ button{font:inherit;color:var(--ink);background:none;border:0;cursor:pointer}
   color:rgba(232,230,223,.34);font-size:clamp(1rem,2.1vw,1.55rem);line-height:1.6;
   transition:color .3s,transform .3s,text-shadow .3s;transform-origin:left center}
 .lyrics li:hover{color:rgba(232,230,223,.6)}
-.lyrics li.on{color:var(--gold);transform:scale(1.06);
-  text-shadow:0 0 26px rgba(232,194,106,.35)}
+.lyrics li.on{color:var(--gold);transform:scale(1.07);
+  text-shadow:0 0 30px rgba(232,194,106,.4)}
 .lyrics li.near{color:rgba(232,230,223,.55)}
-/* 這兩條要放在 canvas#bars 與 .lyrics ol 的本體規則之後,同分特異性靠順序決勝 */
-@media (max-width:820px){
-  .lyrics ol{padding:34vh 0}
-  canvas#bars{display:none}   /* 行動裝置不接 graph,留著只是一塊空白 */
-}
-
-/* 飄浮的貓掌 */
-.paws{position:fixed;inset:0;z-index:1;pointer-events:none;overflow:hidden}
-.paws svg{position:absolute;bottom:-12vh;width:34px;height:34px;
-  fill:var(--pink);opacity:.16;animation:drift linear infinite}
-@keyframes drift{
-  from{transform:translate3d(0,0,0) rotate(0deg)}
-  to{transform:translate3d(var(--dx,20px),-118vh,0) rotate(var(--rot,40deg))}
-}
-@media (prefers-reduced-motion:reduce){.paws{display:none}.lyrics ol{transition:none}}
 
 .top{position:fixed;top:0;left:0;right:0;z-index:3;display:flex;gap:1rem;
-  align-items:center;padding:.7rem 1rem;font-size:.85rem;color:var(--ink-dim)}
-.top a{color:var(--ink-dim);text-decoration:none}
-.top a:hover{color:var(--pink)}
+  align-items:center;padding:.7rem 1rem;font-size:.85rem;color:var(--ink-dim);
+  transition:opacity .5s}
+.top a,.top button{color:var(--ink-dim);text-decoration:none;font-size:.85rem}
+.top a:hover,.top button:hover{color:var(--pink)}
 .top .sp{flex:1}
+
+/* 播放中滑鼠不動就把介面收起來,直播畫面只剩封面、歌詞與特效 */
+body.idle{cursor:none}
+body.idle .top,body.idle .ctrl{opacity:0;pointer-events:none}
+
+#hint{position:fixed;left:50%;bottom:1.4rem;transform:translateX(-50%);z-index:4;
+  padding:.45rem 1rem;border-radius:2rem;background:rgba(18,20,29,.72);
+  border:1px solid var(--line);color:var(--ink-dim);font-size:.82rem;
+  opacity:0;transition:opacity .5s;pointer-events:none;white-space:nowrap}
+#hint.show{opacity:1}
+
+@media (max-width:820px){
+  /* 上方那條是 fixed 的,padding-top 要留給它,不然封面會壓到「回漫畫首頁」 */
+  .stage{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr);
+    gap:.9rem;padding:3rem 1rem 1rem;align-content:start}
+  .art{width:min(52vw,210px)}
+  .lyrics ol{padding:34vh 0}
+}
+@media (prefers-reduced-motion:reduce){
+  .lyrics ol,.art,.bg{transition:none}
+}
 </style>
 </head>
 <body>
-<div class="bg"></div>
-<div class="paws" aria-hidden="true"></div>
+<div class="bg" id="bg"></div>
+<canvas id="fx"></canvas>
 
 <nav class="top">
   <a href="./">‹ 回漫畫首頁</a>
   <span class="sp"></span>
+  <button id="share" type="button">分享</button>
   <a href="assets/theme-song.mp3" download>下載 MP3</a>
-  <button id="fs" type="button" style="color:inherit">全螢幕</button>
+  <button id="fs" type="button">全螢幕</button>
 </nav>
 
 <main class="stage">
   <div class="side">
-    <div class="art" id="art">
+    <div class="art" id="art" title="點一下播放">
       <img src="images/theme-song-cover.webp" width="900" height="900"
            alt="〈貓貓進行曲〉封面：四隻轉生成貓的工程師站在草原上，分別是法師、劍士、白虎武士與盜賊。">
     </div>
@@ -122,7 +135,6 @@ button{font:inherit;color:var(--ink);background:none;border:0;cursor:pointer}
       <p>《轉生成貓貓的我們》主題曲 · 林亞澤 × AI ·
          <a href="https://suno.com" rel="noopener">Suno</a> 生成</p>
     </div>
-    <canvas id="bars" width="840" height="108" aria-hidden="true"></canvas>
     <div class="ctrl">
       <button class="play" id="play" type="button" aria-label="播放">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path id="picon" d="M8 5v14l11-7z"/></svg>
@@ -140,12 +152,15 @@ button{font:inherit;color:var(--ink);background:none;border:0;cursor:pointer}
   </section>
 </main>
 
+<div id="hint">點畫面會有貓掌，按住拖曳會一路灑出來</div>
 <audio id="au" src="assets/theme-song.mp3" preload="metadata"></audio>
 
 <script>
 const au = document.getElementById('au');
 const linesEl = document.getElementById('lines');
 const art = document.getElementById('art');
+const hintEl = document.getElementById('hint');
+const reduced = matchMedia('(prefers-reduced-motion:reduce)').matches;
 let lrc = [];   // [{t, text}]
 let active = -1;
 
@@ -185,8 +200,10 @@ function paintLyrics(now){
     kids[k].className = k === i ? 'on' : (Math.abs(k - i) === 1 ? 'near' : '');
   }
   const cur = kids[i];
-  if (cur) linesEl.style.transform =
+  if (!cur) return;
+  linesEl.style.transform =
     `translateY(${linesEl.parentElement.clientHeight / 2 - cur.offsetTop - cur.offsetHeight / 2}px)`;
+  burst(...artCenter(), 6, .45);            // 換句就從封面撒一小把
 }
 
 /* ── 控制 ── */
@@ -194,97 +211,257 @@ const fmt = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2,
 const bar = document.getElementById('bar');
 const picon = document.getElementById('picon');
 const PLAY = 'M8 5v14l11-7z', PAUSE = 'M7 5h3.5v14H7zm6.5 0H17v14h-3.5z';
+const toggle = () => au.paused ? au.play() : au.pause();
 
-document.getElementById('play').onclick = () => au.paused ? au.play() : au.pause();
+document.getElementById('play').onclick = toggle;
+art.onclick = toggle;
 au.onplay = () => { picon.setAttribute('d', PAUSE); startAudioGraph(); };
-au.onpause = () => picon.setAttribute('d', PLAY);
+au.onpause = () => { picon.setAttribute('d', PLAY); document.body.classList.remove('idle'); };
 au.onloadedmetadata = () => document.getElementById('dur').textContent = fmt(au.duration);
 bar.oninput = () => { if (au.duration) au.currentTime = bar.value / 1000 * au.duration; };
 
 addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT') return;
-  if (e.code === 'Space'){ e.preventDefault(); au.paused ? au.play() : au.pause(); }
+  if (e.code === 'Space'){ e.preventDefault(); toggle(); }
   else if (e.code === 'ArrowRight') au.currentTime = Math.min(au.duration || 0, au.currentTime + 5);
   else if (e.code === 'ArrowLeft') au.currentTime = Math.max(0, au.currentTime - 5);
   else if (e.key === 'f' || e.key === 'F') toggleFs();
+  wake();
 });
 const toggleFs = () => document.fullscreenElement
   ? document.exitFullscreen() : document.documentElement.requestFullscreen();
 document.getElementById('fs').onclick = toggleFs;
 
-/* ── 頻譜與封面脈動 ──
-   ponytail: 行動裝置一律不接 Web Audio graph — Android 關螢幕會掛起 AudioContext
-   直接斷音(glitch-music 真機實證)。接不上就退回靜態,不做模擬動畫。 */
-const canvas = document.getElementById('bars');
-const ctx2d = canvas.getContext('2d');
-let analyser = null, freq = null;
+function toast(msg){
+  hintEl.textContent = msg;
+  hintEl.classList.add('show');
+  clearTimeout(toast.t);
+  toast.t = setTimeout(() => hintEl.classList.remove('show'), 2600);
+}
+document.getElementById('share').onclick = async () => {
+  const url = location.href;
+  if (navigator.share){
+    try { await navigator.share({ title: '貓貓進行曲', text: '《轉生成貓貓的我們》主題曲', url }); return; }
+    catch (_) { /* 使用者取消,往下走複製 */ }
+  }
+  try { await navigator.clipboard.writeText(url); toast('連結複製好了'); }
+  catch (_) { toast(url); }
+};
 
+/* ── 音訊分析 ──
+   ponytail: 行動裝置一律不接 Web Audio graph — Android 關螢幕會掛起 AudioContext
+   直接斷音(glitch-music 真機實證)。接不上就走下面的節拍網格模擬。 */
+let analyser = null, freq = null;
 function startAudioGraph(){
   if (analyser || matchMedia('(pointer:coarse)').matches) return;
   try{
     const ac = new (window.AudioContext || window.webkitAudioContext)();
     const src = ac.createMediaElementSource(au);
     analyser = ac.createAnalyser();
-    analyser.fftSize = 128;
-    analyser.smoothingTimeConstant = .78;
+    analyser.fftSize = 256;
+    analyser.smoothingTimeConstant = .75;
     src.connect(analyser); analyser.connect(ac.destination);
     freq = new Uint8Array(analyser.frequencyBinCount);
     ac.resume();
   }catch(_){ analyser = null; }
 }
 
-function paintBars(){
-  const W = canvas.width, H = canvas.height;
-  ctx2d.clearRect(0, 0, W, H);
-  if (!analyser) return 0;
-  analyser.getByteFrequencyData(freq);
-  const n = 32, step = Math.floor(freq.length / n), w = W / n;
-  let bass = 0;
-  for (let i = 0; i < n; i++){
-    let v = 0;
-    for (let k = 0; k < step; k++) v = Math.max(v, freq[i * step + k]);
-    v /= 255;
-    if (i < 6) bass = Math.max(bass, v);
-    const h = Math.max(2, v * H);
-    const g = ctx2d.createLinearGradient(0, H - h, 0, H);
-    g.addColorStop(0, 'rgba(242,163,179,.95)');
-    g.addColorStop(1, 'rgba(232,194,106,.35)');
-    ctx2d.fillStyle = g;
-    ctx2d.fillRect(i * w + w * .18, H - h, w * .64, h);
-  }
-  return bass;
+/* 接不到 graph 時的替身:這首歌的節拍網格(onset 自相關量出來的,
+   161.5 BPM、第一拍 0.02 秒,對過 200 組隨機網格的負控制)。 */
+const BEAT = 0.3715, PHASE = 0.020;
+function fakeSpectrum(t){
+  const ph = ((t - PHASE) % (BEAT * 2) + BEAT * 2) % (BEAT * 2) / (BEAT * 2);
+  const env = Math.exp(-ph * 4.5);                       // 每兩拍一個衰減包絡
+  return { bass: env * .85, band: i => env * (.35 + .5 * Math.abs(Math.sin(i * 1.7 + t * 3))) };
 }
 
-function tick(){
+/* ── 特效層:頻譜環 + 節拍衝擊波 + 貓掌粒子 ── */
+const PAW = 'M12 14c-2.4 0-4.4 1.6-4.4 3.5S9.6 21 12 21s4.4-1.6 4.4-3.5S14.4 14 12 14zM6.2 12.6c1 0 1.7-1 1.7-2.2S7.2 8.2 6.2 8.2 4.5 9.2 4.5 10.4s.7 2.2 1.7 2.2zm11.6 0c1 0 1.7-1 1.7-2.2s-.7-2.2-1.7-2.2-1.7 1-1.7 2.2.7 2.2 1.7 2.2zM9.6 8.6c1 0 1.8-1.1 1.8-2.4S10.6 3.8 9.6 3.8 7.8 4.9 7.8 6.2s.8 2.4 1.8 2.4zm4.8 0c1 0 1.8-1.1 1.8-2.4s-.8-2.4-1.8-2.4-1.8 1.1-1.8 2.4.8 2.4 1.8 2.4z';
+const pawPath = new Path2D(PAW);
+const fx = document.getElementById('fx');
+const g = fx.getContext('2d');
+let W = 0, H = 0, dpr = 1;
+function resize(){
+  dpr = Math.min(devicePixelRatio || 1, 2);
+  W = innerWidth; H = innerHeight;
+  fx.width = W * dpr; fx.height = H * dpr;
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+addEventListener('resize', resize); resize();
+
+const paws = [], waves = [];
+const MAX_PAWS = 160;
+const artCenter = () => {
+  const r = art.getBoundingClientRect();
+  return [r.left + r.width / 2, r.top + r.height / 2];
+};
+
+function addPaw(x, y, vx, vy, size, life){
+  if (paws.length >= MAX_PAWS) paws.shift();
+  paws.push({ x, y, vx, vy, size, life, age: 0,
+              rot: Math.random() * 6.28, vrot: (Math.random() - .5) * 2 });
+}
+/* 從一點炸開一把 */
+function burst(x, y, n, power = 1){
+  if (reduced) return;
+  for (let i = 0; i < n; i++){
+    const a = Math.random() * 6.28, s = (90 + Math.random() * 210) * power;
+    addPaw(x, y, Math.cos(a) * s, Math.sin(a) * s - 40,
+           16 + Math.random() * 26, 1.1 + Math.random() * .9);
+  }
+}
+
+/* 滑鼠:視差、推開粒子、拖曳灑貓掌 */
+const mouse = { x: -999, y: -999, down: false, last: 0 };
+function wake(){
+  document.body.classList.remove('idle');
+  clearTimeout(wake.t);
+  wake.t = setTimeout(() => { if (!au.paused) document.body.classList.add('idle'); }, 2600);
+}
+addEventListener('pointermove', e => {
+  mouse.x = e.clientX; mouse.y = e.clientY;
+  document.documentElement.style.setProperty('--px', ((e.clientX / W) * 2 - 1).toFixed(3));
+  document.documentElement.style.setProperty('--py', ((e.clientY / H) * 2 - 1).toFixed(3));
+  const now = performance.now();
+  if (mouse.down && now - mouse.last > 45){ mouse.last = now; burst(e.clientX, e.clientY, 2, .4); }
+  wake();
+});
+addEventListener('pointerdown', e => {
+  mouse.down = true;
+  burst(e.clientX, e.clientY, 14);
+  waves.push({ x: e.clientX, y: e.clientY, r: 8, a: .5 });
+  wake();
+});
+addEventListener('pointerup', () => mouse.down = false);
+addEventListener('pointerleave', () => { mouse.x = mouse.y = -999; mouse.down = false; });
+
+/* 節拍偵測:低頻能量竄過近期平均就當一拍,兩拍之間至少隔 220ms */
+const hist = [];
+let lastBeat = 0, kick = 1;
+function detectBeat(bass, now){
+  hist.push(bass);
+  if (hist.length > 60) hist.shift();
+  const avg = hist.reduce((a, b) => a + b, 0) / hist.length;
+  if (bass > avg * 1.32 && bass > .28 && now - lastBeat > 220){
+    lastBeat = now;
+    return true;
+  }
+  return false;
+}
+
+let prev = performance.now();
+function tick(now){
+  const dt = Math.min((now - prev) / 1000, .05); prev = now;
+
   if (!au.paused && au.duration){
     bar.value = au.currentTime / au.duration * 1000;
     document.getElementById('cur').textContent = fmt(au.currentTime);
   }
   paintLyrics(au.currentTime);
-  const bass = paintBars();
-  art.style.transform = `scale(${1 + bass * .022})`;
-  art.style.boxShadow =
-    `0 18px 60px rgba(0,0,0,.6), 0 0 ${18 + bass * 60}px rgba(242,163,179,${.12 + bass * .3})`;
+
+  /* 這一幀的頻譜:接得到 graph 用真的,接不到就用節拍網格 */
+  let bass = 0, band;
+  if (analyser){
+    analyser.getByteFrequencyData(freq);
+    for (let i = 0; i < 6; i++) bass = Math.max(bass, freq[i] / 255);
+    band = i => freq[Math.min(freq.length - 1, 2 + i * 2)] / 255;
+  } else if (!au.paused){
+    const f = fakeSpectrum(au.currentTime);
+    bass = f.bass; band = f.band;
+  } else {
+    band = () => 0;
+  }
+
+  const [cx, cy] = artCenter();
+  if (!au.paused && detectBeat(bass, now)){
+    kick = 1.045;
+    if (!reduced){
+      waves.push({ x: cx, y: cy, r: art.offsetWidth * .52, a: .38 });
+      burst(cx, cy, 3, .5);
+    }
+  }
+  kick += (1 - kick) * Math.min(1, dt * 9);
+  art.style.setProperty('--kick', kick.toFixed(4));
+
+  g.clearRect(0, 0, W, H);
+
+  /* 頻譜環:繞著封面往外長 */
+  const R = art.offsetWidth * .76;
+  const N = 72;
+  g.save();
+  g.translate(cx, cy);
+  g.beginPath();
+  g.arc(0, 0, R - 5, 0, 6.283);
+  g.strokeStyle = `rgba(232,194,106,${.07 + bass * .12})`;
+  g.lineWidth = 1;
+  g.stroke();
+  g.lineCap = 'round';
+  for (let i = 0; i < N; i++){
+    const v = band(i < N / 2 ? i : N - 1 - i);          // 左右對稱,看起來才像一圈
+    const len = 5 + v * art.offsetWidth * .26;
+    const a = (i / N) * 6.283 - 1.5708;
+    g.save(); g.rotate(a);
+    const grad = g.createLinearGradient(0, -R, 0, -R - len);
+    grad.addColorStop(0, `rgba(232,194,106,${.22 + v * .55})`);
+    grad.addColorStop(1, `rgba(242,163,179,${.06 + v * .5})`);
+    g.strokeStyle = grad;
+    g.lineWidth = 5;
+    g.beginPath();
+    g.moveTo(0, -R); g.lineTo(0, -R - len);
+    g.stroke();
+    g.restore();
+  }
+  g.restore();
+
+  /* 節拍衝擊波 */
+  for (let i = waves.length - 1; i >= 0; i--){
+    const w = waves[i];
+    w.r += dt * 520; w.a -= dt * .85;
+    if (w.a <= 0){ waves.splice(i, 1); continue; }
+    g.beginPath();
+    g.arc(w.x, w.y, w.r, 0, 6.283);
+    g.strokeStyle = `rgba(242,163,179,${w.a})`;
+    g.lineWidth = 2;
+    g.stroke();
+  }
+
+  /* 貓掌粒子:自己往上飄,被滑鼠推開 */
+  // 每幀的生成機率,乘上 8 秒壽命就是畫面上的常駐數量:大概 20 到 80 隻
+  if (!reduced && paws.length < MAX_PAWS && Math.random() < (.04 + bass * .12)){
+    addPaw(Math.random() * W, H + 30, (Math.random() - .5) * 30,
+           -(20 + Math.random() * 50 + bass * 90), 18 + Math.random() * 30, 8);
+  }
+  for (let i = paws.length - 1; i >= 0; i--){
+    const p = paws[i];
+    p.age += dt;
+    if (p.age > p.life || p.y < -80){ paws.splice(i, 1); continue; }
+    const dx = p.x - mouse.x, dy = p.y - mouse.y;
+    const d2 = dx * dx + dy * dy;
+    if (d2 < 26000){                                    // 滑鼠 160px 內把貓掌推開
+      const d = Math.max(24, Math.sqrt(d2)), f = (1 - d / 161) * 900;
+      p.vx += (dx / d) * f * dt; p.vy += (dy / d) * f * dt;
+    }
+    p.vx *= (1 - dt * .9); p.vy *= (1 - dt * .9);
+    p.vy -= dt * 12;                                    // 一路慢慢往上飄
+    p.x += p.vx * dt; p.y += p.vy * dt;
+    p.rot += p.vrot * dt;
+    const fade = Math.min(1, (p.life - p.age) / .6);
+    g.save();
+    g.translate(p.x, p.y);
+    g.rotate(p.rot);
+    g.scale(p.size / 24, p.size / 24);
+    g.translate(-12, -12);
+    g.fillStyle = `rgba(242,163,179,${(.13 + bass * .22) * fade})`;
+    g.fill(pawPath);
+    g.restore();
+  }
+
   requestAnimationFrame(tick);
 }
-tick();
+requestAnimationFrame(tick);
 
-/* ── 飄浮貓掌 ── */
-const PAW = 'M12 14c-2.4 0-4.4 1.6-4.4 3.5S9.6 21 12 21s4.4-1.6 4.4-3.5S14.4 14 12 14zM6.2 12.6c1 0 1.7-1 1.7-2.2S7.2 8.2 6.2 8.2 4.5 9.2 4.5 10.4s.7 2.2 1.7 2.2zm11.6 0c1 0 1.7-1 1.7-2.2s-.7-2.2-1.7-2.2-1.7 1-1.7 2.2.7 2.2 1.7 2.2zM9.6 8.6c1 0 1.8-1.1 1.8-2.4S10.6 3.8 9.6 3.8 7.8 4.9 7.8 6.2s.8 2.4 1.8 2.4zm4.8 0c1 0 1.8-1.1 1.8-2.4s-.8-2.4-1.8-2.4-1.8 1.1-1.8 2.4.8 2.4 1.8 2.4z';
-const paws = document.querySelector('.paws');
-for (let i = 0; i < 14; i++){
-  const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  s.setAttribute('viewBox', '0 0 24 24');
-  s.innerHTML = `<path d="${PAW}"/>`;
-  const scale = .6 + Math.random() * 1.1;
-  s.style.left = (Math.random() * 100) + 'vw';
-  s.style.width = s.style.height = (34 * scale) + 'px';
-  s.style.setProperty('--dx', (Math.random() * 120 - 60) + 'px');
-  s.style.setProperty('--rot', (Math.random() * 160 - 80) + 'deg');
-  s.style.animationDuration = (16 + Math.random() * 18) + 's';
-  s.style.animationDelay = (-Math.random() * 30) + 's';
-  paws.appendChild(s);
-}
+setTimeout(() => { hintEl.classList.add('show');
+  setTimeout(() => hintEl.classList.remove('show'), 5200); }, 1200);
 </script>
 </body>
 </html>

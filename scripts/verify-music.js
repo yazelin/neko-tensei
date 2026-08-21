@@ -97,6 +97,44 @@ function serve() {
     await page.screenshot({ path: '/tmp/neko-music.png' });
     console.log('截圖:/tmp/neko-music.png');
 
+    /* 頻譜環有沒有真的繞著封面:在封面外緣那一圈取樣,要幾乎都畫得到;
+       再往外兩倍半徑取一次當負控制,那裡應該是空的。只看截圖看不出圓心跑掉。 */
+    const ring = await page.evaluate(() => {
+      const c = document.getElementById('fx'), g2 = c.getContext('2d');
+      const dp = c.width / innerWidth;
+      const r = document.getElementById('art').getBoundingClientRect();
+      const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      const R = r.width * .76;
+      const hit = (rad) => {
+        let n = 0, tot = 0;
+        for (let i = 0; i < 72; i++){
+          const a = i / 72 * 6.283 - 1.5708;
+          const x = Math.round((cx + Math.cos(a) * rad) * dp);
+          const y = Math.round((cy + Math.sin(a) * rad) * dp);
+          if (x < 0 || y < 0 || x >= c.width || y >= c.height) continue;
+          tot++;
+          if (g2.getImageData(x, y, 1, 1).data[3] > 6) n++;
+        }
+        return tot ? n / tot : 0;
+      };
+      return { on: hit(R + 2), off: hit(R * 2.5) };
+    });
+    check('頻譜環繞在封面外緣', ring.on > .6, `命中率 ${(ring.on * 100).toFixed(0)}%`);
+    check('負控制:兩倍半徑外是空的', ring.off < .2, `命中率 ${(ring.off * 100).toFixed(0)}%`);
+
+    /* 滑鼠互動:點一下會炸出貓掌與一圈衝擊波 */
+    const before = await page.evaluate(() => paws.length);
+    await page.mouse.click(300, 700);
+    const after = await page.evaluate(() => ({ paws: paws.length, waves: waves.length }));
+    check('點畫面炸出貓掌', after.paws - before >= 10, `多了 ${after.paws - before} 隻`);
+    check('點畫面有衝擊波', after.waves >= 1, `${after.waves} 圈`);
+
+    /* 播放中滑鼠不動,介面要自己收起來(直播畫面只留封面與歌詞) */
+    await page.evaluate(() => { au.play(); wake(); });
+    await page.waitForTimeout(3200);
+    check('閒置後介面收起來', await page.evaluate(() => document.body.classList.contains('idle')));
+    await page.evaluate(() => { au.pause(); });
+
     check('沒有 console 錯誤', errors.length === 0, errors.join(' | '));
   } finally {
     await browser.close();

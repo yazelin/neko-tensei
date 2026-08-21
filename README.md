@@ -66,7 +66,14 @@ service worker 的 scope 與各自的慣例都要求如此。
 
 ## 主題曲
 
-〈貓貓進行曲〉在 [music.html](https://yazelin.github.io/neko-tensei/music.html)，獨立一頁的播放器：封面、逐行高亮的動態歌詞、跟著低頻脈動的封面與頻譜。直播介紹漫畫時可以另開一個分頁放著。
+〈貓貓進行曲〉在 [music.html](https://yazelin.github.io/neko-tensei/music.html)，獨立一頁的播放器：封面、逐行高亮的動態歌詞，加上一整塊 canvas 特效層（繞著封面的頻譜環、踩到拍子就往外擴的衝擊波、會被滑鼠推開的貓掌粒子）。
+
+直播用的幾件事：
+
+- **點畫面**炸出一把貓掌，**按住拖曳**一路灑；滑鼠移動時封面會跟著轉一點角度，背景往反方向推
+- **播放中滑鼠停 2.6 秒**，上排連結與播放列自動淡出、游標也藏起來，畫面只剩封面、歌詞與特效，適合直接推進 OBS
+- 空白鍵播放暫停、左右鍵 ±5 秒、`F` 全螢幕；點封面也是播放暫停；點歌詞任一行跳到那一句
+- 手機不接 Web Audio（Android 關螢幕會掛起 AudioContext 直接斷音），特效改吃量出來的節拍網格：161.5 BPM、第一拍 0.02 秒，那組數字對過 200 組隨機網格的負控制
 
 | 檔案 | 內容 |
 |---|---|
@@ -74,7 +81,7 @@ service worker 的 scope 與各自的慣例都要求如此。
 | `assets/theme-song.lrc` | 時間軸正本，網頁讀的是這一份 |
 | `images/theme-song-cover.webp` | 頁面用的封面 |
 
-時間軸怎麼來的：whisper `large-v3-turbo --max-len 1` 拿逐字時間戳，用 `SequenceMatcher` 對到歌詞（**只取時間，文字一律用歌詞正本**），再逐段對錨修正。LRC 比歌詞單多四行「喵喵喵 貓貓進行曲」——第一段副歌之後那段 hook 真的有唱，歌詞單沒寫。
+時間軸怎麼來的：whisper `large-v3-turbo --max-len 1` 拿逐字時間戳，用 `SequenceMatcher` 對到歌詞（**只取時間，文字一律用歌詞正本**），再逐段對錨修正。LRC 比歌詞單多四行「喵喵喵 貓貓進行曲」：第一段副歌之後那段 hook 真的有唱，歌詞單沒寫。
 
 **哪一行早了晚了就改 `assets/theme-song.lrc`**，純文字，改完跑驗收：
 
