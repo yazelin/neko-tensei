@@ -9,7 +9,7 @@
 /* 版號由 build.py 從清單裡每個檔案的內容算出來,別手改。改殼檔或換圖跑一次
    build.py 就會自己變;要強制所有讀者重來,改 build.py 的 EPOCH。 */
 /* ver:start */
-const SHELL = 'nt-shell-v20-26e8d9f3';
+const SHELL = 'nt-shell-v20-4c77c7a2';
 const ASSET = 'nt-asset-v20-686eaedc';
 /* ver:end */
 
@@ -89,7 +89,10 @@ async function warm() {
 self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET') return;
-  if (new URL(req.url).origin !== location.origin) return;
+  const url = new URL(req.url);
+  if (url.origin !== location.origin) return;
+  // 主題曲 3.5MB:不進快取也不經手,讓瀏覽器直接跟伺服器談 Range,拖曳進度條才準
+  if (url.pathname.endsWith('.mp3')) return;
 
   const isHTML = req.mode === 'navigate' || (req.headers.get('accept') || '').includes('text/html');
 
