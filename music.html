@@ -61,13 +61,27 @@ body{margin:0;background:var(--bg);color:var(--ink);overflow:hidden;
 .ctrl{display:flex;align-items:center;gap:.9rem;width:min(100%,400px);
   transition:opacity .5s}
 button{font:inherit;color:var(--ink);background:none;border:0;cursor:pointer}
-.play{width:52px;height:52px;flex:none;border-radius:50%;
+.play{position:relative;width:52px;height:52px;flex:none;border-radius:50%;
   background:linear-gradient(135deg,var(--gold),#d9a548);color:#241c08;
   display:grid;place-items:center}
+.play::before,.play::after{content:"";position:absolute;top:-12px;width:17px;height:21px;
+  clip-path:polygon(50% 0,100% 100%,0 100%);
+  background:radial-gradient(circle at 50% 116%,var(--pink) 0 34%,#e8c26a 35%);
+  transform:translateY(calc((1 - var(--kick,1)) * 42px));   /* 踩到拍子耳朵豎一下 */
+  transition:transform .12s linear}
+.play::before{left:4px;rotate:-15deg}
+.play::after{right:4px;rotate:15deg}
 .play:hover{filter:brightness(1.08)}
 .play svg{width:22px;height:22px;fill:currentColor}
 .seek{flex:1;min-width:0;display:flex;align-items:center;gap:.6rem}
-.seek input{flex:1;min-width:0;accent-color:var(--pink);height:3px}
+.seek input{flex:1;min-width:0;height:22px;-webkit-appearance:none;appearance:none;
+  background:none}
+.seek input::-webkit-slider-runnable-track{height:3px;border-radius:2px;
+  background:rgba(232,230,223,.22)}
+.seek input::-moz-range-track{height:3px;border-radius:2px;background:rgba(232,230,223,.22)}
+.seek input::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;margin-top:-8.5px;
+  background:url(assets/cursor-paw.png) center/contain no-repeat;border:0}
+.seek input::-moz-range-thumb{width:20px;height:20px;border:0;background:url(assets/cursor-paw.png) center/contain no-repeat}
 .seek .t{font-variant-numeric:tabular-nums;font-size:.8rem;color:var(--ink-dim)}
 
 /* 右:歌詞 */
@@ -90,8 +104,16 @@ button{font:inherit;color:var(--ink);background:none;border:0;cursor:pointer}
 .top a:hover,.top button:hover{color:var(--pink)}
 .top .sp{flex:1}
 
+/* 游標換成貓掌肉球:一般狀態粉紅,可以點的東西換成金色。
+   兩行一組是為了舊瀏覽器——看不懂 image-set 的吃上面那行的 1x。 */
+body{cursor:url(assets/cursor-paw.png) 14 5,auto}
+body{cursor:image-set(url(assets/cursor-paw.png) 1x,url(assets/cursor-paw-2x.png) 2x) 14 5,auto}
+a,button,input,.art,.lyrics li{cursor:url(assets/cursor-paw-gold.png) 14 5,pointer}
+a,button,input,.art,.lyrics li{
+  cursor:image-set(url(assets/cursor-paw-gold.png) 1x,url(assets/cursor-paw-gold-2x.png) 2x) 14 5,pointer}
+
 /* 播放中滑鼠不動就把介面收起來,直播畫面只剩封面、歌詞與特效 */
-body.idle{cursor:none}
+body.idle,body.idle *{cursor:none}
 body.idle .top,body.idle .ctrl{opacity:0;pointer-events:none}
 
 #hint{position:fixed;left:50%;bottom:1.4rem;transform:translateX(-50%);z-index:4;
@@ -381,7 +403,7 @@ function tick(now){
     }
   }
   kick += (1 - kick) * Math.min(1, dt * 9);
-  art.style.setProperty('--kick', kick.toFixed(4));
+  document.documentElement.style.setProperty('--kick', kick.toFixed(4));
 
   g.clearRect(0, 0, W, H);
 

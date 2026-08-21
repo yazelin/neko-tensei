@@ -54,8 +54,10 @@ function serve() {
   const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   const errors = [];
+  const missing = [];
   page.on('console', m => m.type() === 'error' && errors.push(m.text()));
   page.on('pageerror', e => errors.push(String(e)));
+  page.on('response', r => { if (r.status() >= 400) missing.push(`${r.url()} ${r.status()}`); });
 
   try {
     await page.goto(`${BASE}/music.html`, { waitUntil: 'load' });
@@ -135,6 +137,22 @@ function serve() {
     check('閒置後介面收起來', await page.evaluate(() => document.body.classList.contains('idle')));
     await page.evaluate(() => { au.pause(); });
 
+    /* 游標與貓耳:路徑打錯只會安靜地退回系統箭頭,截圖也照不到游標,只能查算出來的樣式 */
+    const skin = await page.evaluate(() => {
+      const play = document.getElementById('play');
+      return { body: getComputedStyle(document.body).cursor,
+               play: getComputedStyle(play).cursor,
+               ear: getComputedStyle(play, '::before').clipPath,
+               idle: (() => { document.body.classList.add('idle');
+                              const c = getComputedStyle(play).cursor;
+                              document.body.classList.remove('idle'); return c; })() };
+    });
+    check('游標換成貓掌', /cursor-paw\.png/.test(skin.body), skin.body.slice(0, 48));
+    check('可以點的東西是金色貓掌', /cursor-paw-gold/.test(skin.play), skin.play.slice(0, 48));
+    check('閒置時連游標一起藏', skin.idle === 'none', skin.idle);
+    check('播放鍵有貓耳', /polygon/.test(skin.ear), skin.ear);
+
+    check('沒有抓不到的檔案', missing.length === 0, missing.join(' | '));
     check('沒有 console 錯誤', errors.length === 0, errors.join(' | '));
   } finally {
     await browser.close();
