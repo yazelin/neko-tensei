@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>貓貓進行曲 — 轉生成貓貓的我們 主題曲</title>
+<meta name="description" content="《轉生成貓貓的我們》主題曲〈貓貓進行曲〉，附動態歌詞播放器。">
+<link rel="icon" href="assets/favicon-32.png" sizes="32x32">
+<link rel="canonical" href="https://yazelin.github.io/neko-tensei/music.html">
+<meta property="og:type" content="music.song">
+<meta property="og:title" content="貓貓進行曲 — 轉生成貓貓的我們 主題曲">
+<meta property="og:description" content="四個工程師轉生成貓，連主題曲都要唱 Merge Conflict。">
+<meta property="og:image" content="https://yazelin.github.io/neko-tensei/images/theme-song-cover.webp">
+<meta property="og:url" content="https://yazelin.github.io/neko-tensei/music.html">
+<style>
+:root{
+  --bg:#12141d; --ink:#e8e6df; --ink-dim:#a8a89f;
+  --pink:#f2a3b3; --gold:#e8c26a; --line:rgba(232,194,106,.22);
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);overflow:hidden;
+  font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  letter-spacing:.03em}
+/* 背景:同一張封面放大模糊,加一層暗罩,免得歌詞讀不出來 */
+.bg{position:fixed;inset:-8%;background:url(images/theme-song-cover.webp) center/cover;
+  filter:blur(48px) saturate(1.2) brightness(.55);transform:scale(1.1);z-index:0}
+.bg::after{content:"";position:absolute;inset:0;
+  background:radial-gradient(ellipse 70% 60% at 50% 40%,rgba(18,20,29,.45),rgba(18,20,29,.92))}
+
+.stage{position:relative;z-index:2;height:100dvh;display:grid;
+  grid-template-columns:minmax(0,42%) minmax(0,1fr);gap:clamp(1rem,4vw,3rem);
+  align-items:center;padding:clamp(1rem,3vw,2.5rem) clamp(1rem,4vw,3rem)}
+@media (max-width:820px){
+  /* 上方那條是 fixed 的,padding-top 要留給它,不然封面會壓到「回漫畫首頁」 */
+  .stage{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr);
+    gap:.8rem;padding:3rem 1rem 1rem;align-content:start}
+}
+
+/* 左:封面與控制 */
+.side{display:flex;flex-direction:column;align-items:center;gap:1rem;min-width:0}
+.art{position:relative;width:min(100%,420px);aspect-ratio:1;border-radius:18px;
+  overflow:hidden;border:1px solid var(--line);
+  box-shadow:0 18px 60px rgba(0,0,0,.6),0 0 0 rgba(242,163,179,0);
+  transition:box-shadow .12s linear,transform .12s linear}
+.art img{width:100%;height:100%;object-fit:cover;display:block}
+@media (max-width:820px){.art{width:min(46vw,190px)}}
+.meta{text-align:center;line-height:1.5}
+.meta h1{font-family:"Noto Serif TC","Songti TC",Georgia,serif;
+  font-size:clamp(1.3rem,3.4vw,2rem);margin:0 0 .25em;letter-spacing:.1em}
+.meta p{margin:0;color:var(--ink-dim);font-size:.9rem}
+.meta p a{color:var(--ink-dim);text-decoration:underline;text-underline-offset:3px}
+.meta p a:hover{color:var(--pink)}
+
+canvas#bars{width:min(100%,420px);height:54px;display:block;opacity:.85}
+
+.ctrl{display:flex;align-items:center;gap:.9rem;width:min(100%,420px)}
+button{font:inherit;color:var(--ink);background:none;border:0;cursor:pointer}
+.play{width:52px;height:52px;flex:none;border-radius:50%;
+  background:linear-gradient(135deg,var(--gold),#d9a548);color:#241c08;
+  display:grid;place-items:center}
+.play:hover{filter:brightness(1.08)}
+.play svg{width:22px;height:22px;fill:currentColor}
+.seek{flex:1;min-width:0;display:flex;align-items:center;gap:.6rem}
+.seek input{flex:1;min-width:0;accent-color:var(--pink);height:3px}
+.seek .t{font-variant-numeric:tabular-nums;font-size:.8rem;color:var(--ink-dim)}
+
+/* 右:歌詞 */
+.lyrics{position:relative;height:100%;min-height:0;overflow:hidden;
+  -webkit-mask-image:linear-gradient(transparent,#000 16%,#000 84%,transparent);
+  mask-image:linear-gradient(transparent,#000 16%,#000 84%,transparent)}
+.lyrics ol{list-style:none;margin:0;padding:44vh 0;transition:transform .45s cubic-bezier(.22,.61,.36,1)}
+.lyrics li{margin:0 0 .55em;padding:.15em .3em;cursor:pointer;border-radius:8px;
+  color:rgba(232,230,223,.34);font-size:clamp(1rem,2.1vw,1.55rem);line-height:1.6;
+  transition:color .3s,transform .3s,text-shadow .3s;transform-origin:left center}
+.lyrics li:hover{color:rgba(232,230,223,.6)}
+.lyrics li.on{color:var(--gold);transform:scale(1.06);
+  text-shadow:0 0 26px rgba(232,194,106,.35)}
+.lyrics li.near{color:rgba(232,230,223,.55)}
+/* 這兩條要放在 canvas#bars 與 .lyrics ol 的本體規則之後,同分特異性靠順序決勝 */
+@media (max-width:820px){
+  .lyrics ol{padding:34vh 0}
+  canvas#bars{display:none}   /* 行動裝置不接 graph,留著只是一塊空白 */
+}
+
+/* 飄浮的貓掌 */
+.paws{position:fixed;inset:0;z-index:1;pointer-events:none;overflow:hidden}
+.paws svg{position:absolute;bottom:-12vh;width:34px;height:34px;
+  fill:var(--pink);opacity:.16;animation:drift linear infinite}
+@keyframes drift{
+  from{transform:translate3d(0,0,0) rotate(0deg)}
+  to{transform:translate3d(var(--dx,20px),-118vh,0) rotate(var(--rot,40deg))}
+}
+@media (prefers-reduced-motion:reduce){.paws{display:none}.lyrics ol{transition:none}}
+
+.top{position:fixed;top:0;left:0;right:0;z-index:3;display:flex;gap:1rem;
+  align-items:center;padding:.7rem 1rem;font-size:.85rem;color:var(--ink-dim)}
+.top a{color:var(--ink-dim);text-decoration:none}
+.top a:hover{color:var(--pink)}
+.top .sp{flex:1}
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<div class="paws" aria-hidden="true"></div>
+
+<nav class="top">
+  <a href="./">‹ 回漫畫首頁</a>
+  <span class="sp"></span>
+  <a href="assets/theme-song.mp3" download>下載 MP3</a>
+  <button id="fs" type="button" style="color:inherit">全螢幕</button>
+</nav>
+
+<main class="stage">
+  <div class="side">
+    <div class="art" id="art">
+      <img src="images/theme-song-cover.webp" width="900" height="900"
+           alt="〈貓貓進行曲〉封面：四隻轉生成貓的工程師站在草原上，分別是法師、劍士、白虎武士與盜賊。">
+    </div>
+    <div class="meta">
+      <h1>貓貓進行曲</h1>
+      <p>《轉生成貓貓的我們》主題曲 ·
+         <a href="https://suno.com" rel="noopener">Suno</a> 生成</p>
+    </div>
+    <canvas id="bars" width="840" height="108" aria-hidden="true"></canvas>
+    <div class="ctrl">
+      <button class="play" id="play" type="button" aria-label="播放">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path id="picon" d="M8 5v14l11-7z"/></svg>
+      </button>
+      <div class="seek">
+        <span class="t" id="cur">0:00</span>
+        <input id="bar" type="range" min="0" max="1000" value="0" step="1" aria-label="播放進度">
+        <span class="t" id="dur">2:24</span>
+      </div>
+    </div>
+  </div>
+
+  <section class="lyrics" id="lyrics" aria-label="歌詞">
+    <ol id="lines"></ol>
+  </section>
+</main>
+
+<audio id="au" src="assets/theme-song.mp3" preload="metadata"></audio>
+
+<script>
+const au = document.getElementById('au');
+const linesEl = document.getElementById('lines');
+const art = document.getElementById('art');
+let lrc = [];   // [{t, text}]
+let active = -1;
+
+/* ── 歌詞 ── */
+function parseLrc(text){
+  const out = [];
+  for (const raw of text.split('\n')){
+    const m = raw.match(/^((?:\[\d+:\d+(?:[.:]\d+)?\])+)(.*)$/);
+    if (!m) continue;                       // [ti:] 這類標頭直接跳過
+    const body = m[2].trim();
+    for (const tag of m[1].matchAll(/\[(\d+):(\d+(?:[.:]\d+)?)\]/g)){
+      out.push({ t: +tag[1] * 60 + parseFloat(tag[2].replace(':', '.')), text: body });
+    }
+  }
+  return out.sort((a, b) => a.t - b.t);
+}
+
+fetch('assets/theme-song.lrc').then(r => r.text()).then(text => {
+  lrc = parseLrc(text);
+  linesEl.innerHTML = '';
+  lrc.forEach((ln, i) => {
+    const li = document.createElement('li');
+    li.textContent = ln.text;
+    li.onclick = () => { au.currentTime = ln.t + .01; if (au.paused) au.play(); };
+    li.dataset.i = i;
+    linesEl.appendChild(li);
+  });
+}).catch(() => { linesEl.innerHTML = '<li class="on">歌詞載入失敗</li>'; });
+
+function paintLyrics(now){
+  let i = -1;
+  while (i + 1 < lrc.length && lrc[i + 1].t <= now) i++;
+  if (i === active) return;
+  active = i;
+  const kids = linesEl.children;
+  for (let k = 0; k < kids.length; k++){
+    kids[k].className = k === i ? 'on' : (Math.abs(k - i) === 1 ? 'near' : '');
+  }
+  const cur = kids[i];
+  if (cur) linesEl.style.transform =
+    `translateY(${linesEl.parentElement.clientHeight / 2 - cur.offsetTop - cur.offsetHeight / 2}px)`;
+}
+
+/* ── 控制 ── */
+const fmt = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+const bar = document.getElementById('bar');
+const picon = document.getElementById('picon');
+const PLAY = 'M8 5v14l11-7z', PAUSE = 'M7 5h3.5v14H7zm6.5 0H17v14h-3.5z';
+
+document.getElementById('play').onclick = () => au.paused ? au.play() : au.pause();
+au.onplay = () => { picon.setAttribute('d', PAUSE); startAudioGraph(); };
+au.onpause = () => picon.setAttribute('d', PLAY);
+au.onloadedmetadata = () => document.getElementById('dur').textContent = fmt(au.duration);
+bar.oninput = () => { if (au.duration) au.currentTime = bar.value / 1000 * au.duration; };
+
+addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.code === 'Space'){ e.preventDefault(); au.paused ? au.play() : au.pause(); }
+  else if (e.code === 'ArrowRight') au.currentTime = Math.min(au.duration || 0, au.currentTime + 5);
+  else if (e.code === 'ArrowLeft') au.currentTime = Math.max(0, au.currentTime - 5);
+  else if (e.key === 'f' || e.key === 'F') toggleFs();
+});
+const toggleFs = () => document.fullscreenElement
+  ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+document.getElementById('fs').onclick = toggleFs;
+
+/* ── 頻譜與封面脈動 ──
+   ponytail: 行動裝置一律不接 Web Audio graph — Android 關螢幕會掛起 AudioContext
+   直接斷音(glitch-music 真機實證)。接不上就退回靜態,不做模擬動畫。 */
+const canvas = document.getElementById('bars');
+const ctx2d = canvas.getContext('2d');
+let analyser = null, freq = null;
+
+function startAudioGraph(){
+  if (analyser || matchMedia('(pointer:coarse)').matches) return;
+  try{
+    const ac = new (window.AudioContext || window.webkitAudioContext)();
+    const src = ac.createMediaElementSource(au);
+    analyser = ac.createAnalyser();
+    analyser.fftSize = 128;
+    analyser.smoothingTimeConstant = .78;
+    src.connect(analyser); analyser.connect(ac.destination);
+    freq = new Uint8Array(analyser.frequencyBinCount);
+    ac.resume();
+  }catch(_){ analyser = null; }
+}
+
+function paintBars(){
+  const W = canvas.width, H = canvas.height;
+  ctx2d.clearRect(0, 0, W, H);
+  if (!analyser) return 0;
+  analyser.getByteFrequencyData(freq);
+  const n = 32, step = Math.floor(freq.length / n), w = W / n;
+  let bass = 0;
+  for (let i = 0; i < n; i++){
+    let v = 0;
+    for (let k = 0; k < step; k++) v = Math.max(v, freq[i * step + k]);
+    v /= 255;
+    if (i < 6) bass = Math.max(bass, v);
+    const h = Math.max(2, v * H);
+    const g = ctx2d.createLinearGradient(0, H - h, 0, H);
+    g.addColorStop(0, 'rgba(242,163,179,.95)');
+    g.addColorStop(1, 'rgba(232,194,106,.35)');
+    ctx2d.fillStyle = g;
+    ctx2d.fillRect(i * w + w * .18, H - h, w * .64, h);
+  }
+  return bass;
+}
+
+function tick(){
+  if (!au.paused && au.duration){
+    bar.value = au.currentTime / au.duration * 1000;
+    document.getElementById('cur').textContent = fmt(au.currentTime);
+  }
+  paintLyrics(au.currentTime);
+  const bass = paintBars();
+  art.style.transform = `scale(${1 + bass * .022})`;
+  art.style.boxShadow =
+    `0 18px 60px rgba(0,0,0,.6), 0 0 ${18 + bass * 60}px rgba(242,163,179,${.12 + bass * .3})`;
+  requestAnimationFrame(tick);
+}
+tick();
+
+/* ── 飄浮貓掌 ── */
+const PAW = 'M12 14c-2.4 0-4.4 1.6-4.4 3.5S9.6 21 12 21s4.4-1.6 4.4-3.5S14.4 14 12 14zM6.2 12.6c1 0 1.7-1 1.7-2.2S7.2 8.2 6.2 8.2 4.5 9.2 4.5 10.4s.7 2.2 1.7 2.2zm11.6 0c1 0 1.7-1 1.7-2.2s-.7-2.2-1.7-2.2-1.7 1-1.7 2.2.7 2.2 1.7 2.2zM9.6 8.6c1 0 1.8-1.1 1.8-2.4S10.6 3.8 9.6 3.8 7.8 4.9 7.8 6.2s.8 2.4 1.8 2.4zm4.8 0c1 0 1.8-1.1 1.8-2.4s-.8-2.4-1.8-2.4-1.8 1.1-1.8 2.4.8 2.4 1.8 2.4z';
+const paws = document.querySelector('.paws');
+for (let i = 0; i < 14; i++){
+  const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  s.setAttribute('viewBox', '0 0 24 24');
+  s.innerHTML = `<path d="${PAW}"/>`;
+  const scale = .6 + Math.random() * 1.1;
+  s.style.left = (Math.random() * 100) + 'vw';
+  s.style.width = s.style.height = (34 * scale) + 'px';
+  s.style.setProperty('--dx', (Math.random() * 120 - 60) + 'px');
+  s.style.setProperty('--rot', (Math.random() * 160 - 80) + 'deg');
+  s.style.animationDuration = (16 + Math.random() * 18) + 's';
+  s.style.animationDelay = (-Math.random() * 30) + 's';
+  paws.appendChild(s);
+}
+</script>
+</body>
+</html>

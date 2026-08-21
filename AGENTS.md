@@ -106,6 +106,10 @@ const ASSET = 'nt-asset-v20-c32beb0e';  // 圖檔清單的內容 hash
 
 `sw.js` 不能把自己算進 hash（會自我參照）。**改了 sw.js 的快取策略、或知道舊快取裡已經有髒資料**，把 `build.py` 的 `EPOCH` +1 強制所有人重來。
 
+### 主題曲的 mp3 不要加進快取清單
+
+`sw.js` 的 fetch 開頭有一條 `.mp3` 直接放行，`build.py` 的 `warm` 清單裡也沒有它。3.5 MB 進 `ASSET` 會讓每個回訪讀者多抓一份；而且快取回來的是完整 200，瀏覽器要 Range 才能準確拖曳進度條。要離線聽就下載檔案，不是塞進 service worker。
+
 ### localStorage 的 key 一律 `nt-` 前綴
 
 `yazelin.github.io` 是**所有 GitHub Pages 專案共用的 origin**。用 `progress` 這種通名會跟別的專案互相覆蓋。同理，從別的專案寫進來的資料不可信——`app.js` 讀 `nt-progress` 時有驗證欄位型別、用 `textContent` 不用 `innerHTML`。
@@ -148,6 +152,9 @@ pipeline 的驗證器換過三次做法，前兩次都是被「拿既有真實�
 # 行動版體驗（42 項，iPhone 13 實尺寸，驗 DOM 與座標不是看截圖）
 NODE_PATH=$(npm root -g) node scripts/verify-mobile.js
 
+# 主題曲播放器（歌詞對到哪一行、播得動、沒有 console 錯誤）
+NODE_PATH=$(npm root -g) node scripts/verify-music.js
+
 # pipeline 單元測試
 python3 -B -m unittest discover -s scripts -p 'test_*.py'
 
@@ -179,3 +186,4 @@ python3 scripts/verify_pages.py --regression   # 改規則後必跑
 | `docs/superpowers/specs/` | 設計文件 |
 | `docs/superpowers/plans/` | 實作計劃 |
 | [`episodes.json`](episodes.json) | 話數與頁次的單一事實來源 |
+| `assets/theme-song.lrc` | 主題曲的歌詞時間軸正本，播放器讀這一份 |

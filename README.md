@@ -45,13 +45,14 @@
 
 ```
 index.html            首頁(最新一話、話數列表、角色、誕生故事)
+music.html            主題曲播放器(動態歌詞,獨立一頁)
 episodes.json         單一事實來源:話數、頁次、alt、掛名、角色清單
 build.py              產生 ep/*.html、首頁話數列表、sitemap.xml、sw.js 快取清單
 style.css app.js      全站樣式與行動版行為
 manifest.json sw.js   PWA:可安裝、離線閱讀(SHELL/ASSET 兩層快取)
 ep/N.html             各話閱讀頁(產生檔,別手改)
 char/<slug>.html      角色介紹頁(手寫)
-assets/               icon、favicon、og 圖
+assets/               icon、favicon、og 圖、主題曲 mp3 與 LRC
 images/epN/           第 N 話的漫畫頁(webp,對白已在圖裡)
 images/char-*.webp    角色對照圖
 partials/footer.html  各頁共用的 footer 與推廣三件套
@@ -62,6 +63,26 @@ docs/superpowers/     設計與實作計劃
 
 `sw.js`、`manifest.json`、`robots.txt`、`sitemap.xml`、`index.html` 必須留在根目錄——
 service worker 的 scope 與各自的慣例都要求如此。
+
+## 主題曲
+
+〈貓貓進行曲〉在 [music.html](https://yazelin.github.io/neko-tensei/music.html)，獨立一頁的播放器：封面、逐行高亮的動態歌詞、跟著低頻脈動的封面與頻譜。直播介紹漫畫時可以另開一個分頁放著。
+
+| 檔案 | 內容 |
+|---|---|
+| `assets/theme-song.mp3` | 音檔，ID3 帶封面與 LRC（USLT 幀，匯進支援的播放器就有動態歌詞） |
+| `assets/theme-song.lrc` | 時間軸正本，網頁讀的是這一份 |
+| `images/theme-song-cover.webp` | 頁面用的封面 |
+
+時間軸怎麼來的：whisper `large-v3-turbo --max-len 1` 拿逐字時間戳，用 `SequenceMatcher` 對到歌詞（**只取時間，文字一律用歌詞正本**），再逐段對錨修正。LRC 比歌詞單多四行「喵喵喵 貓貓進行曲」——第一段副歌之後那段 hook 真的有唱，歌詞單沒寫。
+
+**哪一行早了晚了就改 `assets/theme-song.lrc`**，純文字，改完跑驗收：
+
+```bash
+NODE_PATH=$(npm root -g) node scripts/verify-music.js
+```
+
+mp3 有 3.5 MB，**沒有進離線快取**：`sw.js` 對 `.mp3` 直接放行，讓瀏覽器自己跟伺服器談 Range，進度條拖曳才準，回訪讀者也不會白吃這些流量。
 
 ## 新增一話
 
