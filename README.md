@@ -81,6 +81,7 @@ service worker 的 scope 與各自的慣例都要求如此。
 | `assets/theme-song.mp3` | 音檔，ID3 帶封面與 LRC（USLT 幀，匯進支援的播放器就有動態歌詞） |
 | `assets/theme-song.lrc` | 時間軸正本，網頁讀的是這一份 |
 | `images/theme-song-cover.webp` | 頁面用的封面 |
+| `assets/og-music.jpg` | 這一頁專屬的分享圖（1200×630，PIL 疊字產的） |
 
 時間軸怎麼來的：whisper `large-v3-turbo --max-len 1` 拿逐字時間戳，用 `SequenceMatcher` 對到歌詞（**只取時間，文字一律用歌詞正本**），再逐段對錨修正。LRC 比歌詞單多四行「喵喵喵 貓貓進行曲」：第一段副歌之後那段 hook 真的有唱，歌詞單沒寫。
 
