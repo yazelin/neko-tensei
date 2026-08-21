@@ -152,7 +152,6 @@ function serve() {
       const play = document.getElementById('play');
       return { body: getComputedStyle(document.body).cursor,
                play: getComputedStyle(play).cursor,
-               ear: getComputedStyle(play, '::before').clipPath,
                idle: (() => { document.body.classList.add('idle');
                               const c = getComputedStyle(play).cursor;
                               document.body.classList.remove('idle'); return c; })() };
@@ -160,7 +159,24 @@ function serve() {
     check('游標換成貓掌', /cursor-paw\.png/.test(skin.body), skin.body.slice(0, 48));
     check('可以點的東西是金色貓掌', /cursor-paw-gold/.test(skin.play), skin.play.slice(0, 48));
     check('閒置時連游標一起藏', skin.idle === 'none', skin.idle);
-    check('播放鍵有貓耳', /polygon/.test(skin.ear), skin.ear);
+    /* 封面滑過去要浮出播放鈕,而且圖示要跟播放狀態一致(兩顆共用同一個 class) */
+    const hov0 = await page.evaluate(() => getComputedStyle(document.querySelector('.art-hover')).opacity);
+    await page.hover('#art');
+    await page.waitForTimeout(400);
+    const hov1 = await page.evaluate(() => getComputedStyle(document.querySelector('.art-hover')).opacity);
+    check('封面平常不蓋東西', hov0 === '0', hov0);
+    check('滑到封面浮出播放鈕', +hov1 > .9, hov1);
+    const icons = await page.evaluate(async () => {
+      const d = () => [...document.querySelectorAll('.picon')].map(p => p.getAttribute('d'));
+      au.pause(); const stopped = d();
+      await au.play(); const playing = d();
+      au.pause();
+      return { stopped, playing };
+    });
+    check('兩顆圖示都跟著狀態走',
+          icons.stopped.length === 2 && new Set(icons.stopped).size === 1
+          && new Set(icons.playing).size === 1 && icons.stopped[0] !== icons.playing[0],
+          JSON.stringify(icons).slice(0, 90));
 
     check('沒有抓不到的檔案', missing.length === 0, missing.join(' | '));
     check('沒有 console 錯誤', errors.length === 0, errors.join(' | '));
