@@ -47,10 +47,12 @@ body{margin:0;background:var(--bg);color:var(--ink);overflow:hidden;
   transform:perspective(900px) rotateY(calc(var(--px,0)*7deg)) rotateX(calc(var(--py,0)*-7deg)) scale(var(--kick,1));
   transition:transform .18s cubic-bezier(.22,.61,.36,1)}
 .art img{width:100%;height:100%;object-fit:cover;display:block}
-/* 滑過封面時掃一道光 */
-.art::after{content:"";position:absolute;inset:0;opacity:0;transition:opacity .4s;
-  background:linear-gradient(115deg,transparent 38%,rgba(255,255,255,.22) 48%,transparent 58%)}
-.art:hover::after{opacity:1}
+/* 滑過封面就蓋一顆播放/暫停鈕,點下去就是播放暫停 */
+.art-hover{position:absolute;inset:0;display:grid;place-items:center;opacity:0;
+  background:rgba(10,11,17,.42);transition:opacity .25s}
+.art:hover .art-hover,.art:focus-visible .art-hover{opacity:1}
+.art-hover svg{width:74px;height:74px;fill:rgba(255,255,255,.94);
+  filter:drop-shadow(0 6px 18px rgba(0,0,0,.6))}
 .meta{text-align:center;line-height:1.5}
 .meta h1{font-family:"Noto Serif TC","Songti TC",Georgia,serif;
   font-size:clamp(1.3rem,3.4vw,2rem);margin:0 0 .25em;letter-spacing:.1em}
@@ -61,16 +63,9 @@ body{margin:0;background:var(--bg);color:var(--ink);overflow:hidden;
 .ctrl{display:flex;align-items:center;gap:.9rem;width:min(100%,400px);
   transition:opacity .5s}
 button{font:inherit;color:var(--ink);background:none;border:0;cursor:pointer}
-.play{position:relative;width:52px;height:52px;flex:none;border-radius:50%;
+.play{width:52px;height:52px;flex:none;border-radius:50%;
   background:linear-gradient(135deg,var(--gold),#d9a548);color:#241c08;
   display:grid;place-items:center}
-.play::before,.play::after{content:"";position:absolute;top:-12px;width:17px;height:21px;
-  clip-path:polygon(50% 0,100% 100%,0 100%);
-  background:radial-gradient(circle at 50% 116%,var(--pink) 0 34%,#e8c26a 35%);
-  transform:translateY(calc((1 - var(--kick,1)) * 42px));   /* 踩到拍子耳朵豎一下 */
-  transition:transform .12s linear}
-.play::before{left:4px;rotate:-15deg}
-.play::after{right:4px;rotate:15deg}
 .play:hover{filter:brightness(1.08)}
 .play svg{width:22px;height:22px;fill:currentColor}
 .seek{flex:1;min-width:0;display:flex;align-items:center;gap:.6rem}
@@ -151,6 +146,9 @@ body.idle .top,body.idle .ctrl{opacity:0;pointer-events:none}
     <div class="art" id="art" title="點一下播放">
       <img src="images/theme-song-cover.webp" width="900" height="900"
            alt="〈貓貓進行曲〉封面：四隻轉生成貓的工程師站在草原上，分別是法師、劍士、白虎武士與盜賊。">
+      <div class="art-hover" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path class="picon" d="M8 5v14l11-7z"/></svg>
+      </div>
     </div>
     <div class="meta">
       <h1>貓貓進行曲</h1>
@@ -159,7 +157,7 @@ body.idle .top,body.idle .ctrl{opacity:0;pointer-events:none}
     </div>
     <div class="ctrl">
       <button class="play" id="play" type="button" aria-label="播放">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path id="picon" d="M8 5v14l11-7z"/></svg>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path class="picon" d="M8 5v14l11-7z"/></svg>
       </button>
       <div class="seek">
         <span class="t" id="cur">0:00</span>
@@ -231,14 +229,15 @@ function paintLyrics(now){
 /* ── 控制 ── */
 const fmt = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 const bar = document.getElementById('bar');
-const picon = document.getElementById('picon');
 const PLAY = 'M8 5v14l11-7z', PAUSE = 'M7 5h3.5v14H7zm6.5 0H17v14h-3.5z';
+/* 播放鍵與封面上那顆是同一個狀態,一次改兩個 */
+const setIcon = d => document.querySelectorAll('.picon').forEach(p => p.setAttribute('d', d));
 const toggle = () => au.paused ? au.play() : au.pause();
 
 document.getElementById('play').onclick = toggle;
 art.onclick = toggle;
-au.onplay = () => { picon.setAttribute('d', PAUSE); startAudioGraph(); };
-au.onpause = () => { picon.setAttribute('d', PLAY); document.body.classList.remove('idle'); };
+au.onplay = () => { setIcon(PAUSE); startAudioGraph(); };
+au.onpause = () => { setIcon(PLAY); document.body.classList.remove('idle'); };
 au.onloadedmetadata = () => document.getElementById('dur').textContent = fmt(au.duration);
 bar.oninput = () => { if (au.duration) au.currentTime = bar.value / 1000 * au.duration; };
 
