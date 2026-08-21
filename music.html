@@ -318,9 +318,9 @@ const artCenter = () => {
   return [r.left + r.width / 2, r.top + r.height / 2];
 };
 
-function addPaw(x, y, vx, vy, size, life){
+function addPaw(x, y, vx, vy, size, life, rise){
   if (paws.length >= MAX_PAWS) paws.shift();
-  paws.push({ x, y, vx, vy, size, life, age: 0,
+  paws.push({ x, y, vx, vy, size, life, rise, age: 0,
               rot: Math.random() * 6.28, vrot: (Math.random() - .5) * 2 });
 }
 /* 從一點炸開一把 */
@@ -329,7 +329,7 @@ function burst(x, y, n, power = 1){
   for (let i = 0; i < n; i++){
     const a = Math.random() * 6.28, s = (90 + Math.random() * 210) * power;
     addPaw(x, y, Math.cos(a) * s, Math.sin(a) * s - 40,
-           16 + Math.random() * 26, 1.1 + Math.random() * .9);
+           16 + Math.random() * 26, 1.6 + Math.random() * 1.2, 30 + Math.random() * 60);
   }
 }
 
@@ -448,10 +448,11 @@ function tick(now){
   }
 
   /* 貓掌粒子:自己往上飄,被滑鼠推開 */
-  // 每幀的生成機率,乘上 8 秒壽命就是畫面上的常駐數量:大概 20 到 80 隻
-  if (!reduced && paws.length < MAX_PAWS && Math.random() < (.04 + bass * .12)){
-    addPaw(Math.random() * W, H + 30, (Math.random() - .5) * 30,
-           -(20 + Math.random() * 50 + bass * 90), 18 + Math.random() * 30, 8);
+  // 每幀的生成機率,乘上壽命就是畫面上的常駐數量:大概 25 到 85 隻。
+  // 壽命要夠長,不然還沒飄到上半部就消失了。
+  if (!reduced && paws.length < MAX_PAWS && Math.random() < (.03 + bass * .07)){
+    addPaw(Math.random() * W, H + 30, (Math.random() - .5) * 30, 0,
+           18 + Math.random() * 30, 15, 60 + Math.random() * 90 + bass * 110);
   }
   for (let i = paws.length - 1; i >= 0; i--){
     const p = paws[i];
@@ -463,9 +464,9 @@ function tick(now){
       const d = Math.max(24, Math.sqrt(d2)), f = (1 - d / 161) * 900;
       p.vx += (dx / d) * f * dt; p.vy += (dy / d) * f * dt;
     }
-    p.vx *= (1 - dt * .9); p.vy *= (1 - dt * .9);
-    p.vy -= dt * 12;                                    // 一路慢慢往上飄
-    p.x += p.vx * dt; p.y += p.vy * dt;
+    p.vx *= (1 - dt * .9); p.vy *= (1 - dt * .9);      // 打出去的力道會散掉
+    p.x += p.vx * dt;
+    p.y += (p.vy - p.rise) * dt;                        // rise 不衰減,一路飄到畫面外
     p.rot += p.vrot * dt;
     const fade = Math.min(1, (p.life - p.age) / .6);
     g.save();

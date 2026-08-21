@@ -81,6 +81,16 @@ function serve() {
     const played = await page.evaluate(() => ({ t: au.currentTime, paused: au.paused }));
     check('按播放後時間前進', !played.paused && played.t > 0.3, `currentTime=${played.t.toFixed(2)}`);
 
+    /* 貓掌要真的往上飄:量最高那隻三秒內升了多少,不是看畫面上有沒有粒子。
+       之前 vy 被每秒 90% 的衰減吃光,終端速度只剩 13px/s,貓掌只在底部蠕動。
+       注意這段要跑在下面關掉 rAF 之前,不然一幀都不會前進。 */
+    await page.evaluate(() => { paws.length = 0; });
+    await page.waitForFunction(() => paws.length >= 3, { timeout: 8000 });
+    const y0 = await page.evaluate(() => Math.min(...paws.map(p => p.y)));
+    await page.waitForTimeout(3000);
+    const y1 = await page.evaluate(() => Math.min(...paws.map(p => p.y)));
+    check('貓掌一路往上飄', y0 - y1 > 150, `三秒升了 ${(y0 - y1).toFixed(0)}px`);
+
     /* 亮的那行要被捲到視窗中線附近 —— 只驗「有沒有亮」不夠,捲錯了讀者看不到 */
     // 停掉 rAF 迴圈,否則它每一幀都用 currentTime(=0) 把高亮洗掉
     await page.evaluate(() => { window.requestAnimationFrame = () => 0; });

@@ -159,6 +159,7 @@ def main():
             f'      </a>\n'
             f'      <div>\n'
             f'        <a class="btn" href="ep/{first["n"]}.html">開始閱讀 第{zh(first["n"])}話</a>\n'
+            f'        <a class="btn ghost" href="music.html">聽主題曲</a>\n'
             f'        <button class="btn ghost" id="inst" type="button">安裝到手機</button>\n'
             f'      </div>')
     if last is not first:
@@ -167,7 +168,8 @@ def main():
     splice('index.html', 'latest', hero)
 
     # sitemap
-    urls = [f'  <url><loc>{BASE}</loc><lastmod>{EPS[-1]["date"]}</lastmod></url>']
+    urls = [f'  <url><loc>{BASE}</loc><lastmod>{EPS[-1]["date"]}</lastmod></url>',
+            f'  <url><loc>{BASE}music.html</loc><lastmod>{EPS[-1]["date"]}</lastmod></url>']
     for ep in EPS:
         urls.append(f'  <url><loc>{BASE}ep/{ep["n"]}.html</loc><lastmod>{ep["date"]}</lastmod></url>')
     for c in CFG['characters']:
