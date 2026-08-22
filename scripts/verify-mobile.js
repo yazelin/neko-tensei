@@ -453,6 +453,21 @@ async function main() {
       fxBox.dpr > 1 && Math.abs(fxBox.cssW - fxBox.vw) < 1 && Math.abs(fxBox.cssH - fxBox.vh) < 1,
       JSON.stringify(fxBox));
 
+    // ── 檢查:封面上下的光環一樣寬 ──
+    // 頻譜環往封面外長出約 0.52 倍封面寬,那圈畫在 canvas 上、版面不佔位。
+    // 上緣沒讓出空間的話光環上半被切掉、下半完整露出,整個 UI 看起來偏上。
+    const halo = await page.evaluate(() => {
+      const a = document.getElementById('art'), r = a.getBoundingClientRect();
+      const cy = r.top + r.height / 2;
+      const rout = a.offsetWidth * .76 + 5 + a.offsetWidth * .26;   // 跟 tick() 裡畫的一致
+      return { above: r.top - Math.max(0, cy - rout),
+               below: Math.min(innerHeight, cy + rout) - r.bottom,
+               ringTop: cy - rout };
+    });
+    check('封面上下的光環一樣寬(UI 不偏上)',
+      halo.ringTop >= -2 && Math.abs(halo.above - halo.below) < 8,
+      `上 ${halo.above.toFixed(0)}px / 下 ${halo.below.toFixed(0)}px,環頂 ${halo.ringTop.toFixed(0)}`);
+
     // ── 檢查:手機橫躺時控制列與歌詞還在畫面內 ──
     // 橫躺的寬度也在 820 以下,堆成一欄的話封面一個人就吃光高度。
     const ctxL = await browser.newContext({
