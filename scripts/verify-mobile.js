@@ -440,6 +440,38 @@ async function main() {
         /a\.delete\(r\)/.test(swSrc) || /\.delete\(r\)/.test(swSrc));
     }
 
+    // ── 檢查:主題曲頁的特效層在手機上沒有放大跑版 ──
+    // canvas 沒給 CSS 尺寸就用屬性尺寸(W*dpr)排版,dpr 2 的手機上整層頻譜環與
+    // 貓掌會放大兩倍貼在左上角。桌機 dpr=1 時兩者剛好相等,所以只有手機驗得到。
+    await page.goto(BASE + '/music.html');
+    await page.waitForTimeout(400);
+    const fxBox = await page.evaluate(() => {
+      const c = document.getElementById('fx'), r = c.getBoundingClientRect();
+      return { cssW: r.width, cssH: r.height, vw: innerWidth, vh: innerHeight, dpr: devicePixelRatio };
+    });
+    check('特效層 canvas 的 CSS 尺寸等於視窗',
+      fxBox.dpr > 1 && Math.abs(fxBox.cssW - fxBox.vw) < 1 && Math.abs(fxBox.cssH - fxBox.vh) < 1,
+      JSON.stringify(fxBox));
+
+    // ── 檢查:手機橫躺時控制列與歌詞還在畫面內 ──
+    // 橫躺的寬度也在 820 以下,堆成一欄的話封面一個人就吃光高度。
+    const ctxL = await browser.newContext({
+      viewport: { width: 750, height: 342 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
+    const pageL = await newPage(ctxL);
+    await pageL.goto(BASE + '/music.html');
+    await pageL.waitForTimeout(400);
+    const land = await pageL.evaluate(() => {
+      const b = (sel) => document.querySelector(sel).getBoundingClientRect();
+      return { ctrlBottom: b('.ctrl').bottom, lyricsH: b('.lyrics').height,
+               artTop: b('#art').top, topBottom: b('.top').bottom, vh: innerHeight };
+    });
+    check('橫躺時控制列還在畫面內', land.ctrlBottom <= land.vh + 1,
+      `控制列底 ${land.ctrlBottom.toFixed(0)} vs 視窗高 ${land.vh}`);
+    check('橫躺時歌詞欄還有高度', land.lyricsH > 100, `${land.lyricsH.toFixed(0)}px`);
+    check('橫躺時封面沒被頂欄壓到', land.artTop >= land.topBottom - 2,
+      `封面頂 ${land.artTop.toFixed(0)} vs 頂欄底 ${land.topBottom.toFixed(0)}`);
+    await ctxL.close();
+
     await browser.close();
 
     check('整輪沒有 console error 或 pageerror', consoleErrors.length === 0,
